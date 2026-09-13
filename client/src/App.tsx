@@ -11,6 +11,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/quiz" component={Home} />
+      <Route path="/breeds/:animal" component={Home} />
       <Route path="/compatibility" component={Home} />
       <Route path="/care" component={Home} />
       <Route path="/policies/:policy" component={Home} />
