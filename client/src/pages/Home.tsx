@@ -196,7 +196,7 @@ function SourceAssistant() {
     <div className="assistant-heading"><span className="feature-icon"><Sparkles size={19} /></span><div><span className="eyebrow">source assistant</span><h2>Ask a care question.</h2></div></div>
     <p>Get an immediate, safety-first response from Petwise's curated source rules — species-specific care, diet, costs, introductions, and emergencies. It is not live browsing or veterinary diagnosis.</p>
     <div className="assistant-input">
-      <input aria-label="Ask a pet care question" value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && ask()} placeholder="e.g. What do rabbits eat?" />
+      <input aria-label="Ask a pet care question" value={query} maxLength={200} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && ask()} placeholder="e.g. What do rabbits eat?" />
       <button className="button button-dark" onClick={() => ask()}>Ask <ArrowRight size={16} /></button>
     </div>
     <div className="chip-row" aria-label="Suggested questions">
