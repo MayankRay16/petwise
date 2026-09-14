@@ -1,144 +1,1074 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useRoute } from "wouter";
-import { ArrowRight, Check, ChevronDown, ChevronLeft, CircleHelp, ExternalLink, Heart, Leaf, Menu, ShieldCheck, Sparkles, X } from "lucide-react";
-import { answerFor, type AssistantAnswer, suggestedQuestions } from "@/assistant";
-
+import {
+  ArrowRight,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  CircleHelp,
+  ExternalLink,
+  Heart,
+  Leaf,
+  Menu,
+  ShieldCheck,
+  Sparkles,
+  X,
+} from "lucide-react";
+import {
+  answerFor,
+  type AssistantAnswer,
+  suggestedQuestions,
+} from "@/assistant";
+import { householdScore } from "@/compatibility";
 
 function usePageTitle(title: string) {
-  useEffect(() => { document.title = title; }, [title]);
+  useEffect(() => {
+    document.title = title;
+  }, [title]);
 }
-
 
 const sources = {
   avmaCare: "https://www.avma.org/resources-tools/pet-owners/petcare",
-  avmaVaccines: "https://www.avma.org/resources-tools/pet-owners/petcare/vaccinations",
+  avmaVaccines:
+    "https://www.avma.org/resources-tools/pet-owners/petcare/vaccinations",
   aaha: "https://www.aaha.org/resources/pet-health-resources/preventive-care/",
-  aspcaEmergency: "https://www.aspca.org/pet-care/general-pet-care/emergency-care-your-pet",
+  aspcaEmergency:
+    "https://www.aspca.org/pet-care/general-pet-care/emergency-care-your-pet",
 };
 
 const animalCatalog = [
-  { id: "dog", name: "Dog", group: "Mammals", emoji: "🐕", color: "#b9d7c7", energy: 4, alone: 2, care: "high", note: "Dogs need daily social interaction, exercise, training, preventive care, and a realistic plan for time alone." },
-  { id: "cat", name: "Cat", group: "Mammals", emoji: "🐈", color: "#f1c7b4", energy: 2, alone: 4, care: "moderate", note: "Cats need enrichment, play, litter care, scratching options, preventive visits, and a safe home—not just food and a window." },
-  { id: "rabbit", name: "Rabbit", group: "Mammals", emoji: "🐇", color: "#d9c7e9", energy: 3, alone: 3, care: "high", note: "Rabbits need daily movement, enrichment, careful nutrition, and access to rabbit-savvy veterinary care." },
-  { id: "guinea-pig", name: "Guinea pig", group: "Mammals", emoji: "🐹", color: "#f4d5a6", energy: 2, alone: 3, care: "moderate", note: "Guinea pigs need species-appropriate food, vitamin C, hiding spaces, daily care, and careful temperature management." },
-  { id: "mouse", name: "Mouse", group: "Mammals", emoji: "🐁", color: "#d8d1ce", energy: 3, alone: 2, care: "moderate", note: "Mice need social planning, secure enrichment-rich housing, clean bedding, species-appropriate diet, and gentle handling." },
-  { id: "rat", name: "Rat", group: "Mammals", emoji: "🐀", color: "#d5c9c4", energy: 4, alone: 2, care: "moderate", note: "Rats are social and intelligent; plan for same-sex companionship, a large enriched enclosure, and daily interaction." },
-  { id: "gerbil", name: "Gerbil", group: "Mammals", emoji: "🐭", color: "#e0c9a9", energy: 3, alone: 2, care: "moderate", note: "Gerbils need compatible social companions, deep burrowing substrate, secure housing, and a species-specific diet." },
-  { id: "chinchilla", name: "Chinchilla", group: "Mammals", emoji: "🐭", color: "#c9d2d5", energy: 3, alone: 2, care: "high", note: "Chinchillas need cool temperatures, dust baths, climbing space, companionship, long-term planning, and exotic veterinary care." },
-  { id: "mule", name: "Mule", group: "Working animals", emoji: "🫏", color: "#cfc9bd", energy: 3, alone: 1, care: "high", note: "Mules are long-lived working equids needing companionship, forage, hoof care, safe handling, and equine veterinary support." },
-  { id: "water-buffalo", name: "Water buffalo", group: "Farm animals", emoji: "🐃", color: "#cbc4bd", energy: 3, alone: 1, care: "high", note: "Water buffalo need herd companionship, ample managed space, climate-appropriate shelter, safe handling, and bovine care." },
-  { id: "hamster", name: "Hamster", group: "Mammals", emoji: "🐹", color: "#e9c7b7", energy: 2, alone: 4, care: "moderate", note: "Hamsters are small but not effortless: enclosure size, deep bedding, enrichment, and a nocturnal schedule matter." },
-  { id: "ferret", name: "Ferret", group: "Mammals", emoji: "🦦", color: "#d7e4c9", energy: 4, alone: 2, care: "high", note: "Ferrets are social, curious, and active. Secure spaces, enrichment, diet, and exotic-animal veterinary access are important." },
-  { id: "horse", name: "Horse", group: "Mammals", emoji: "🐎", color: "#dfc8b6", energy: 5, alone: 1, care: "high", note: "Horse care is a daily, long-term commitment involving land, companionship, hoof care, nutrition, and equine veterinary support." },
-  { id: "goat", name: "Goat", group: "Farm animals", emoji: "🐐", color: "#d8e2d1", energy: 4, alone: 1, care: "high", note: "Goats are social herd animals and need secure fencing, companionship, forage, shelter, and species-specific care." },
-  { id: "sheep", name: "Sheep", group: "Farm animals", emoji: "🐑", color: "#ece9de", energy: 3, alone: 1, care: "high", note: "Sheep need appropriate flock companionship, grazing or forage, shelter, parasite management, and routine care." },
-  { id: "pig", name: "Pig", group: "Farm animals", emoji: "🐖", color: "#f1c5c0", energy: 3, alone: 2, care: "high", note: "Pigs are intelligent, social animals whose adult size, rooting behavior, diet, and housing needs must be planned for." },
-  { id: "cow", name: "Cattle", group: "Farm animals", emoji: "🐄", color: "#e7d7c9", energy: 3, alone: 1, care: "high", note: "Cattle need herd companionship, sufficient land or managed forage, shelter, safe handling, and large-animal veterinary care." },
-  { id: "donkey", name: "Donkey", group: "Working animals", emoji: "🫏", color: "#d5d2c9", energy: 3, alone: 1, care: "high", note: "Donkeys are social, long-lived equids needing companionship, appropriate forage, hoof care, shelter, and equine veterinary support." },
-  { id: "llama", name: "Llama", group: "Camelids", emoji: "🦙", color: "#e9d9c6", energy: 3, alone: 1, care: "high", note: "Llamas need compatible companionship, secure fencing, forage, shelter, routine preventive care, and a plan for their adult size." },
-  { id: "alpaca", name: "Alpaca", group: "Camelids", emoji: "🦙", color: "#efe0cb", energy: 2, alone: 1, care: "high", note: "Alpacas are herd animals needing compatible companions, forage, shelter, shearing, parasite management, and camelid care." },
-  { id: "camel", name: "Camel", group: "Working animals", emoji: "🐪", color: "#e3c49d", energy: 3, alone: 1, care: "high", note: "Camels are large herd animals with specialized diet, space, handling, climate, and large-animal veterinary needs." },
-  { id: "yak", name: "Yak", group: "Farm animals", emoji: "🐂", color: "#cfc5bd", energy: 3, alone: 1, care: "high", note: "Yaks need herd companionship, secure land, forage, shelter suited to climate, safe handling, and bovine veterinary support." },
-  { id: "turkey", name: "Turkey", group: "Birds", emoji: "🦃", color: "#e5c6aa", energy: 3, alone: 1, care: "moderate", note: "Turkeys need suitable flock housing, clean water, biosecurity, predator protection, and species-appropriate nutrition." },
-  { id: "goose", name: "Goose", group: "Birds", emoji: "🪿", color: "#d8e5df", energy: 3, alone: 1, care: "moderate", note: "Geese are social, vocal waterfowl needing compatible companionship, clean water access, secure shelter, and local-rule checks." },
-  { id: "quail", name: "Quail", group: "Birds", emoji: "🐦", color: "#d8c7b6", energy: 2, alone: 1, care: "moderate", note: "Quail need flock-appropriate housing, protection from predators, careful hygiene, nutrition, and temperature management." },
-  { id: "canary", name: "Canary", group: "Birds", emoji: "🐤", color: "#f2df92", energy: 2, alone: 3, care: "moderate", note: "Canaries need a safe flight-friendly enclosure, enrichment, clean air, species-appropriate diet, and avian care access." },
-  { id: "finch", name: "Finch", group: "Birds", emoji: "🐦", color: "#c8d9d6", energy: 3, alone: 2, care: "moderate", note: "Finches generally need social companionship, flight space, clean housing, appropriate diet, and an avian veterinarian." },
-  { id: "chicken", name: "Chicken", group: "Birds", emoji: "🐔", color: "#f2dc9e", energy: 3, alone: 1, care: "moderate", note: "Chickens need a secure coop and run, flock companionship, clean water, predator protection, and local-rule checks." },
-  { id: "duck", name: "Duck", group: "Birds", emoji: "🦆", color: "#b9dbe8", energy: 3, alone: 1, care: "moderate", note: "Ducks need social companionship, clean water for bathing, suitable shelter, and hygiene planning." },
-  { id: "parrot", name: "Parrot", group: "Birds", emoji: "🦜", color: "#c6dfaf", energy: 4, alone: 2, care: "high", note: "Parrots are long-lived, intelligent, social animals needing flight-safe space, enrichment, attention, and avian veterinary care." },
-  { id: "pigeon", name: "Pigeon", group: "Birds", emoji: "🕊️", color: "#d8dde2", energy: 2, alone: 2, care: "moderate", note: "Domestic pigeons need appropriate housing, companionship, hygiene, nutrition, and access to bird-savvy care." },
-  { id: "fish", name: "Fish", group: "Aquatic animals", emoji: "🐟", color: "#b9dbe8", energy: 1, alone: 5, care: "moderate", note: "An aquarium is a living system: cycling, water quality, species compatibility, and routine maintenance are non-negotiable." },
-  { id: "turtle", name: "Turtle", group: "Reptiles", emoji: "🐢", color: "#c7dfbe", energy: 1, alone: 4, care: "moderate", note: "Turtles can be very long-lived and need species-specific heat, UVB, habitat, diet, and reptile veterinary care." },
-  { id: "lizard", name: "Lizard", group: "Reptiles", emoji: "🦎", color: "#c9dfc0", energy: 2, alone: 4, care: "moderate", note: "Lizards need carefully controlled temperature, humidity, lighting, enclosure design, diet, and exotic veterinary access." },
-  { id: "snake", name: "Snake", group: "Reptiles", emoji: "🐍", color: "#d1dec2", energy: 1, alone: 5, care: "moderate", note: "Snakes need secure species-appropriate enclosures, thermal gradients, feeding plans, and a reptile-savvy veterinarian." },
+  {
+    id: "dog",
+    name: "Dog",
+    group: "Mammals",
+    emoji: "🐕",
+    color: "#b9d7c7",
+    energy: 4,
+    alone: 2,
+    care: "high",
+    note: "Dogs need daily social interaction, exercise, training, preventive care, and a realistic plan for time alone.",
+  },
+  {
+    id: "cat",
+    name: "Cat",
+    group: "Mammals",
+    emoji: "🐈",
+    color: "#f1c7b4",
+    energy: 2,
+    alone: 4,
+    care: "moderate",
+    note: "Cats need enrichment, play, litter care, scratching options, preventive visits, and a safe home—not just food and a window.",
+  },
+  {
+    id: "rabbit",
+    name: "Rabbit",
+    group: "Mammals",
+    emoji: "🐇",
+    color: "#d9c7e9",
+    energy: 3,
+    alone: 3,
+    care: "high",
+    note: "Rabbits need daily movement, enrichment, careful nutrition, and access to rabbit-savvy veterinary care.",
+  },
+  {
+    id: "guinea-pig",
+    name: "Guinea pig",
+    group: "Mammals",
+    emoji: "🐹",
+    color: "#f4d5a6",
+    energy: 2,
+    alone: 3,
+    care: "moderate",
+    note: "Guinea pigs need species-appropriate food, vitamin C, hiding spaces, daily care, and careful temperature management.",
+  },
+  {
+    id: "mouse",
+    name: "Mouse",
+    group: "Mammals",
+    emoji: "🐁",
+    color: "#d8d1ce",
+    energy: 3,
+    alone: 2,
+    care: "moderate",
+    note: "Mice need social planning, secure enrichment-rich housing, clean bedding, species-appropriate diet, and gentle handling.",
+  },
+  {
+    id: "rat",
+    name: "Rat",
+    group: "Mammals",
+    emoji: "🐀",
+    color: "#d5c9c4",
+    energy: 4,
+    alone: 2,
+    care: "moderate",
+    note: "Rats are social and intelligent; plan for same-sex companionship, a large enriched enclosure, and daily interaction.",
+  },
+  {
+    id: "gerbil",
+    name: "Gerbil",
+    group: "Mammals",
+    emoji: "🐭",
+    color: "#e0c9a9",
+    energy: 3,
+    alone: 2,
+    care: "moderate",
+    note: "Gerbils need compatible social companions, deep burrowing substrate, secure housing, and a species-specific diet.",
+  },
+  {
+    id: "chinchilla",
+    name: "Chinchilla",
+    group: "Mammals",
+    emoji: "🐭",
+    color: "#c9d2d5",
+    energy: 3,
+    alone: 2,
+    care: "high",
+    note: "Chinchillas need cool temperatures, dust baths, climbing space, companionship, long-term planning, and exotic veterinary care.",
+  },
+  {
+    id: "mule",
+    name: "Mule",
+    group: "Working animals",
+    emoji: "🫏",
+    color: "#cfc9bd",
+    energy: 3,
+    alone: 1,
+    care: "high",
+    note: "Mules are long-lived working equids needing companionship, forage, hoof care, safe handling, and equine veterinary support.",
+  },
+  {
+    id: "water-buffalo",
+    name: "Water buffalo",
+    group: "Farm animals",
+    emoji: "🐃",
+    color: "#cbc4bd",
+    energy: 3,
+    alone: 1,
+    care: "high",
+    note: "Water buffalo need herd companionship, ample managed space, climate-appropriate shelter, safe handling, and bovine care.",
+  },
+  {
+    id: "hamster",
+    name: "Hamster",
+    group: "Mammals",
+    emoji: "🐹",
+    color: "#e9c7b7",
+    energy: 2,
+    alone: 4,
+    care: "moderate",
+    note: "Hamsters are small but not effortless: enclosure size, deep bedding, enrichment, and a nocturnal schedule matter.",
+  },
+  {
+    id: "ferret",
+    name: "Ferret",
+    group: "Mammals",
+    emoji: "🦦",
+    color: "#d7e4c9",
+    energy: 4,
+    alone: 2,
+    care: "high",
+    note: "Ferrets are social, curious, and active. Secure spaces, enrichment, diet, and exotic-animal veterinary access are important.",
+  },
+  {
+    id: "horse",
+    name: "Horse",
+    group: "Mammals",
+    emoji: "🐎",
+    color: "#dfc8b6",
+    energy: 5,
+    alone: 1,
+    care: "high",
+    note: "Horse care is a daily, long-term commitment involving land, companionship, hoof care, nutrition, and equine veterinary support.",
+  },
+  {
+    id: "goat",
+    name: "Goat",
+    group: "Farm animals",
+    emoji: "🐐",
+    color: "#d8e2d1",
+    energy: 4,
+    alone: 1,
+    care: "high",
+    note: "Goats are social herd animals and need secure fencing, companionship, forage, shelter, and species-specific care.",
+  },
+  {
+    id: "sheep",
+    name: "Sheep",
+    group: "Farm animals",
+    emoji: "🐑",
+    color: "#ece9de",
+    energy: 3,
+    alone: 1,
+    care: "high",
+    note: "Sheep need appropriate flock companionship, grazing or forage, shelter, parasite management, and routine care.",
+  },
+  {
+    id: "pig",
+    name: "Pig",
+    group: "Farm animals",
+    emoji: "🐖",
+    color: "#f1c5c0",
+    energy: 3,
+    alone: 2,
+    care: "high",
+    note: "Pigs are intelligent, social animals whose adult size, rooting behavior, diet, and housing needs must be planned for.",
+  },
+  {
+    id: "cow",
+    name: "Cattle",
+    group: "Farm animals",
+    emoji: "🐄",
+    color: "#e7d7c9",
+    energy: 3,
+    alone: 1,
+    care: "high",
+    note: "Cattle need herd companionship, sufficient land or managed forage, shelter, safe handling, and large-animal veterinary care.",
+  },
+  {
+    id: "donkey",
+    name: "Donkey",
+    group: "Working animals",
+    emoji: "🫏",
+    color: "#d5d2c9",
+    energy: 3,
+    alone: 1,
+    care: "high",
+    note: "Donkeys are social, long-lived equids needing companionship, appropriate forage, hoof care, shelter, and equine veterinary support.",
+  },
+  {
+    id: "llama",
+    name: "Llama",
+    group: "Camelids",
+    emoji: "🦙",
+    color: "#e9d9c6",
+    energy: 3,
+    alone: 1,
+    care: "high",
+    note: "Llamas need compatible companionship, secure fencing, forage, shelter, routine preventive care, and a plan for their adult size.",
+  },
+  {
+    id: "alpaca",
+    name: "Alpaca",
+    group: "Camelids",
+    emoji: "🦙",
+    color: "#efe0cb",
+    energy: 2,
+    alone: 1,
+    care: "high",
+    note: "Alpacas are herd animals needing compatible companions, forage, shelter, shearing, parasite management, and camelid care.",
+  },
+  {
+    id: "camel",
+    name: "Camel",
+    group: "Working animals",
+    emoji: "🐪",
+    color: "#e3c49d",
+    energy: 3,
+    alone: 1,
+    care: "high",
+    note: "Camels are large herd animals with specialized diet, space, handling, climate, and large-animal veterinary needs.",
+  },
+  {
+    id: "yak",
+    name: "Yak",
+    group: "Farm animals",
+    emoji: "🐂",
+    color: "#cfc5bd",
+    energy: 3,
+    alone: 1,
+    care: "high",
+    note: "Yaks need herd companionship, secure land, forage, shelter suited to climate, safe handling, and bovine veterinary support.",
+  },
+  {
+    id: "turkey",
+    name: "Turkey",
+    group: "Birds",
+    emoji: "🦃",
+    color: "#e5c6aa",
+    energy: 3,
+    alone: 1,
+    care: "moderate",
+    note: "Turkeys need suitable flock housing, clean water, biosecurity, predator protection, and species-appropriate nutrition.",
+  },
+  {
+    id: "goose",
+    name: "Goose",
+    group: "Birds",
+    emoji: "🪿",
+    color: "#d8e5df",
+    energy: 3,
+    alone: 1,
+    care: "moderate",
+    note: "Geese are social, vocal waterfowl needing compatible companionship, clean water access, secure shelter, and local-rule checks.",
+  },
+  {
+    id: "quail",
+    name: "Quail",
+    group: "Birds",
+    emoji: "🐦",
+    color: "#d8c7b6",
+    energy: 2,
+    alone: 1,
+    care: "moderate",
+    note: "Quail need flock-appropriate housing, protection from predators, careful hygiene, nutrition, and temperature management.",
+  },
+  {
+    id: "canary",
+    name: "Canary",
+    group: "Birds",
+    emoji: "🐤",
+    color: "#f2df92",
+    energy: 2,
+    alone: 3,
+    care: "moderate",
+    note: "Canaries need a safe flight-friendly enclosure, enrichment, clean air, species-appropriate diet, and avian care access.",
+  },
+  {
+    id: "finch",
+    name: "Finch",
+    group: "Birds",
+    emoji: "🐦",
+    color: "#c8d9d6",
+    energy: 3,
+    alone: 2,
+    care: "moderate",
+    note: "Finches generally need social companionship, flight space, clean housing, appropriate diet, and an avian veterinarian.",
+  },
+  {
+    id: "chicken",
+    name: "Chicken",
+    group: "Birds",
+    emoji: "🐔",
+    color: "#f2dc9e",
+    energy: 3,
+    alone: 1,
+    care: "moderate",
+    note: "Chickens need a secure coop and run, flock companionship, clean water, predator protection, and local-rule checks.",
+  },
+  {
+    id: "duck",
+    name: "Duck",
+    group: "Birds",
+    emoji: "🦆",
+    color: "#b9dbe8",
+    energy: 3,
+    alone: 1,
+    care: "moderate",
+    note: "Ducks need social companionship, clean water for bathing, suitable shelter, and hygiene planning.",
+  },
+  {
+    id: "parrot",
+    name: "Parrot",
+    group: "Birds",
+    emoji: "🦜",
+    color: "#c6dfaf",
+    energy: 4,
+    alone: 2,
+    care: "high",
+    note: "Parrots are long-lived, intelligent, social animals needing flight-safe space, enrichment, attention, and avian veterinary care.",
+  },
+  {
+    id: "pigeon",
+    name: "Pigeon",
+    group: "Birds",
+    emoji: "🕊️",
+    color: "#d8dde2",
+    energy: 2,
+    alone: 2,
+    care: "moderate",
+    note: "Domestic pigeons need appropriate housing, companionship, hygiene, nutrition, and access to bird-savvy care.",
+  },
+  {
+    id: "fish",
+    name: "Fish",
+    group: "Aquatic animals",
+    emoji: "🐟",
+    color: "#b9dbe8",
+    energy: 1,
+    alone: 5,
+    care: "moderate",
+    note: "An aquarium is a living system: cycling, water quality, species compatibility, and routine maintenance are non-negotiable.",
+  },
+  {
+    id: "turtle",
+    name: "Turtle",
+    group: "Reptiles",
+    emoji: "🐢",
+    color: "#c7dfbe",
+    energy: 1,
+    alone: 4,
+    care: "moderate",
+    note: "Turtles can be very long-lived and need species-specific heat, UVB, habitat, diet, and reptile veterinary care.",
+  },
+  {
+    id: "lizard",
+    name: "Lizard",
+    group: "Reptiles",
+    emoji: "🦎",
+    color: "#c9dfc0",
+    energy: 2,
+    alone: 4,
+    care: "moderate",
+    note: "Lizards need carefully controlled temperature, humidity, lighting, enclosure design, diet, and exotic veterinary access.",
+  },
+  {
+    id: "snake",
+    name: "Snake",
+    group: "Reptiles",
+    emoji: "🐍",
+    color: "#d1dec2",
+    energy: 1,
+    alone: 5,
+    care: "moderate",
+    note: "Snakes need secure species-appropriate enclosures, thermal gradients, feeding plans, and a reptile-savvy veterinarian.",
+  },
 ];
 
 const breedLists: Record<string, string[]> = {
-  dog: ["Affenpinscher", "Afghan Hound", "Akita", "Alaskan Malamute", "Australian Shepherd", "Beagle", "Bernese Mountain Dog", "Bichon Frise", "Border Collie", "Boston Terrier", "Boxer", "Bulldog", "Cavalier King Charles Spaniel", "Chihuahua", "Chow Chow", "Cocker Spaniel", "Dachshund", "Dalmatian", "Doberman Pinscher", "English Springer Spaniel", "French Bulldog", "German Shepherd Dog", "Golden Retriever", "Great Dane", "Greyhound", "Havanese", "Labrador Retriever", "Maltese", "Mastiff", "Miniature Schnauzer", "Newfoundland", "Poodle", "Pomeranian", "Pug", "Rottweiler", "Shetland Sheepdog", "Shiba Inu", "Siberian Husky", "Vizsla", "Weimaraner", "Whippet", "Yorkshire Terrier"],
-  cat: ["Abyssinian", "American Bobtail", "American Shorthair", "Balinese", "Bengal", "Birman", "British Shorthair", "Burmese", "Chartreux", "Cornish Rex", "Devon Rex", "Egyptian Mau", "Exotic Shorthair", "Havana Brown", "Himalayan", "Japanese Bobtail", "Maine Coon", "Manx", "Norwegian Forest Cat", "Oriental", "Persian", "Ragdoll", "Russian Blue", "Scottish Fold", "Siamese", "Siberian", "Sphynx", "Tonkinese", "Turkish Angora", "Turkish Van"],
-  rabbit: ["American", "American Fuzzy Lop", "Belgian Hare", "Californian", "Champagne d'Argent", "Checkered Giant", "Dutch", "English Angora", "English Lop", "English Spot", "Flemish Giant", "Florida White", "French Angora", "French Lop", "Havana", "Holland Lop", "Jersey Wooly", "Lionhead", "Mini Lop", "Mini Rex", "Netherland Dwarf", "New Zealand", "Palomino", "Rex", "Silver Fox"],
-  "guinea-pig": ["American", "Abyssinian", "Coronet", "Peruvian", "Silkie", "Teddy", "Texel", "White Crested"],
+  dog: [
+    "Affenpinscher",
+    "Afghan Hound",
+    "Akita",
+    "Alaskan Malamute",
+    "Australian Shepherd",
+    "Beagle",
+    "Bernese Mountain Dog",
+    "Bichon Frise",
+    "Border Collie",
+    "Boston Terrier",
+    "Boxer",
+    "Bulldog",
+    "Cavalier King Charles Spaniel",
+    "Chihuahua",
+    "Chow Chow",
+    "Cocker Spaniel",
+    "Dachshund",
+    "Dalmatian",
+    "Doberman Pinscher",
+    "English Springer Spaniel",
+    "French Bulldog",
+    "German Shepherd Dog",
+    "Golden Retriever",
+    "Great Dane",
+    "Greyhound",
+    "Havanese",
+    "Labrador Retriever",
+    "Maltese",
+    "Mastiff",
+    "Miniature Schnauzer",
+    "Newfoundland",
+    "Poodle",
+    "Pomeranian",
+    "Pug",
+    "Rottweiler",
+    "Shetland Sheepdog",
+    "Shiba Inu",
+    "Siberian Husky",
+    "Vizsla",
+    "Weimaraner",
+    "Whippet",
+    "Yorkshire Terrier",
+  ],
+  cat: [
+    "Abyssinian",
+    "American Bobtail",
+    "American Shorthair",
+    "Balinese",
+    "Bengal",
+    "Birman",
+    "British Shorthair",
+    "Burmese",
+    "Chartreux",
+    "Cornish Rex",
+    "Devon Rex",
+    "Egyptian Mau",
+    "Exotic Shorthair",
+    "Havana Brown",
+    "Himalayan",
+    "Japanese Bobtail",
+    "Maine Coon",
+    "Manx",
+    "Norwegian Forest Cat",
+    "Oriental",
+    "Persian",
+    "Ragdoll",
+    "Russian Blue",
+    "Scottish Fold",
+    "Siamese",
+    "Siberian",
+    "Sphynx",
+    "Tonkinese",
+    "Turkish Angora",
+    "Turkish Van",
+  ],
+  rabbit: [
+    "American",
+    "American Fuzzy Lop",
+    "Belgian Hare",
+    "Californian",
+    "Champagne d'Argent",
+    "Checkered Giant",
+    "Dutch",
+    "English Angora",
+    "English Lop",
+    "English Spot",
+    "Flemish Giant",
+    "Florida White",
+    "French Angora",
+    "French Lop",
+    "Havana",
+    "Holland Lop",
+    "Jersey Wooly",
+    "Lionhead",
+    "Mini Lop",
+    "Mini Rex",
+    "Netherland Dwarf",
+    "New Zealand",
+    "Palomino",
+    "Rex",
+    "Silver Fox",
+  ],
+  "guinea-pig": [
+    "American",
+    "Abyssinian",
+    "Coronet",
+    "Peruvian",
+    "Silkie",
+    "Teddy",
+    "Texel",
+    "White Crested",
+  ],
   mouse: ["Fancy mouse", "Show mouse", "Satin mouse"],
   rat: ["Fancy rat", "Dumbo rat", "Rex rat", "Hairless rat"],
   gerbil: ["Mongolian gerbil", "Fat-tailed gerbil", "Pallid gerbil"],
-  chinchilla: ["Standard Grey", "Beige", "Black Velvet", "Violet", "White", "Ebony"],
+  chinchilla: [
+    "Standard Grey",
+    "Beige",
+    "Black Velvet",
+    "Violet",
+    "White",
+    "Ebony",
+  ],
   mule: ["Mammoth mule", "Standard mule", "Miniature mule", "Draft mule"],
-  "water-buffalo": ["Murrah", "Nili-Ravi", "Mediterranean", "Jafarabadi", "Surti", "Carabao"],
-  hamster: ["Syrian", "Dwarf Campbell's Russian", "Winter White", "Roborovski", "Chinese"],
-  ferret: ["Standard", "Angora", "Black-footed hybrid", "Sable", "Cinnamon", "Albino"],
-  horse: ["Arabian", "American Quarter Horse", "Appaloosa", "Andalusian", "Clydesdale", "Friesian", "Haflinger", "Icelandic Horse", "Lipizzaner", "Morgan", "Mustang", "Paint Horse", "Percheron", "Shetland Pony", "Tennessee Walking Horse", "Thoroughbred", "Welsh Pony"],
-  goat: ["Alpine", "Angora", "Boer", "LaMancha", "Nigerian Dwarf", "Nubian", "Oberhasli", "Pygmy", "Saanen", "Toggenburg"],
-  sheep: ["Babydoll Southdown", "Barbados Blackbelly", "Corriedale", "Dorper", "East Friesian", "Hampshire", "Jacob", "Katahdin", "Merino", "Romney", "Shetland", "Suffolk"],
-  pig: ["American Mini Pig", "American Yorkshire", "Duroc", "Hampshire", "Kunekune", "Large Black", "Large White", "Pot-bellied pig", "Tamworth"],
-  cow: ["Angus", "Ayrshire", "Brown Swiss", "Charolais", "Dexter", "Galloway", "Guernsey", "Hereford", "Holstein", "Jersey", "Limousin", "Shorthorn"],
-  donkey: ["American Mammoth Jackstock", "Baudet du Poitou", "Mammoth Donkey", "Miniature Mediterranean", "Poitou"],
+  "water-buffalo": [
+    "Murrah",
+    "Nili-Ravi",
+    "Mediterranean",
+    "Jafarabadi",
+    "Surti",
+    "Carabao",
+  ],
+  hamster: [
+    "Syrian",
+    "Dwarf Campbell's Russian",
+    "Winter White",
+    "Roborovski",
+    "Chinese",
+  ],
+  ferret: [
+    "Standard",
+    "Angora",
+    "Black-footed hybrid",
+    "Sable",
+    "Cinnamon",
+    "Albino",
+  ],
+  horse: [
+    "Arabian",
+    "American Quarter Horse",
+    "Appaloosa",
+    "Andalusian",
+    "Clydesdale",
+    "Friesian",
+    "Haflinger",
+    "Icelandic Horse",
+    "Lipizzaner",
+    "Morgan",
+    "Mustang",
+    "Paint Horse",
+    "Percheron",
+    "Shetland Pony",
+    "Tennessee Walking Horse",
+    "Thoroughbred",
+    "Welsh Pony",
+  ],
+  goat: [
+    "Alpine",
+    "Angora",
+    "Boer",
+    "LaMancha",
+    "Nigerian Dwarf",
+    "Nubian",
+    "Oberhasli",
+    "Pygmy",
+    "Saanen",
+    "Toggenburg",
+  ],
+  sheep: [
+    "Babydoll Southdown",
+    "Barbados Blackbelly",
+    "Corriedale",
+    "Dorper",
+    "East Friesian",
+    "Hampshire",
+    "Jacob",
+    "Katahdin",
+    "Merino",
+    "Romney",
+    "Shetland",
+    "Suffolk",
+  ],
+  pig: [
+    "American Mini Pig",
+    "American Yorkshire",
+    "Duroc",
+    "Hampshire",
+    "Kunekune",
+    "Large Black",
+    "Large White",
+    "Pot-bellied pig",
+    "Tamworth",
+  ],
+  cow: [
+    "Angus",
+    "Ayrshire",
+    "Brown Swiss",
+    "Charolais",
+    "Dexter",
+    "Galloway",
+    "Guernsey",
+    "Hereford",
+    "Holstein",
+    "Jersey",
+    "Limousin",
+    "Shorthorn",
+  ],
+  donkey: [
+    "American Mammoth Jackstock",
+    "Baudet du Poitou",
+    "Mammoth Donkey",
+    "Miniature Mediterranean",
+    "Poitou",
+  ],
   llama: ["Classic llama", "Suri llama", "Wooly llama", "Silky llama"],
   alpaca: ["Huacaya", "Suri"],
   camel: ["Dromedary", "Bactrian", "Hybrid camel"],
   yak: ["Domestic yak", "White yak", "Golden yak"],
-  turkey: ["Bourbon Red", "Broad Breasted White", "Narragansett", "Royal Palm", "Slate", "Standard Bronze"],
-  goose: ["African", "Embden", "Chinese", "Pilgrim", "Pomeranian", "Roman", "Sebastopol", "Toulouse"],
-  quail: ["Coturnix", "Bobwhite", "California quail", "Button quail", "Gambel's quail"],
-  canary: ["American Singer", "Belgian", "Border Fancy", "Gloster", "Norwich", "Red Factor", "Roller", "Yorkshire"],
-  finch: ["Zebra finch", "Society finch", "Gouldian finch", "Java sparrow", "Bengalese finch"],
-  chicken: ["Australorp", "Barred Plymouth Rock", "Brahma", "Buckeye", "Cochin", "Easter Egger", "Hamburg", "Leghorn", "Orpington", "Plymouth Rock", "Rhode Island Red", "Silkie", "Sussex", "Wyandotte"],
-  duck: ["Ancona", "Call", "Cayuga", "Khaki Campbell", "Magpie", "Muscovy", "Pekin", "Rouen", "Saxony", "Silver Appleyard", "Swedish Blue"],
-  parrot: ["African Grey", "Amazon", "Budgerigar", "Cockatiel", "Cockatoo", "Conure", "Eclectus", "Lovebird", "Macaw", "Parrotlet", "Quaker Parrot", "Senegal Parrot"],
-  pigeon: ["Fantail", "Homing pigeon", "Jacobin", "King", "Lahore", "Modena", "Nun", "Racing Homer", "Roller", "Runt"],
-  fish: ["Betta", "Common goldfish", "Fancy goldfish", "Guppy", "Molly", "Platy", "Swordtail", "Angelfish", "Corydoras", "Gourami", "Neon tetra", "Zebra danio"],
-  turtle: ["Red-eared slider", "Painted turtle", "Box turtle", "Russian tortoise", "Greek tortoise", "Sulcata tortoise", "Leopard tortoise", "Musk turtle"],
-  lizard: ["Bearded dragon", "Leopard gecko", "Crested gecko", "Blue-tongued skink", "Green iguana", "Uromastyx", "Anole", "Chameleon"],
-  snake: ["Corn snake", "Ball python", "Milk snake", "King snake", "Garter snake", "Rosy boa", "Western hognose", "California kingsnake"],
+  turkey: [
+    "Bourbon Red",
+    "Broad Breasted White",
+    "Narragansett",
+    "Royal Palm",
+    "Slate",
+    "Standard Bronze",
+  ],
+  goose: [
+    "African",
+    "Embden",
+    "Chinese",
+    "Pilgrim",
+    "Pomeranian",
+    "Roman",
+    "Sebastopol",
+    "Toulouse",
+  ],
+  quail: [
+    "Coturnix",
+    "Bobwhite",
+    "California quail",
+    "Button quail",
+    "Gambel's quail",
+  ],
+  canary: [
+    "American Singer",
+    "Belgian",
+    "Border Fancy",
+    "Gloster",
+    "Norwich",
+    "Red Factor",
+    "Roller",
+    "Yorkshire",
+  ],
+  finch: [
+    "Zebra finch",
+    "Society finch",
+    "Gouldian finch",
+    "Java sparrow",
+    "Bengalese finch",
+  ],
+  chicken: [
+    "Australorp",
+    "Barred Plymouth Rock",
+    "Brahma",
+    "Buckeye",
+    "Cochin",
+    "Easter Egger",
+    "Hamburg",
+    "Leghorn",
+    "Orpington",
+    "Plymouth Rock",
+    "Rhode Island Red",
+    "Silkie",
+    "Sussex",
+    "Wyandotte",
+  ],
+  duck: [
+    "Ancona",
+    "Call",
+    "Cayuga",
+    "Khaki Campbell",
+    "Magpie",
+    "Muscovy",
+    "Pekin",
+    "Rouen",
+    "Saxony",
+    "Silver Appleyard",
+    "Swedish Blue",
+  ],
+  parrot: [
+    "African Grey",
+    "Amazon",
+    "Budgerigar",
+    "Cockatiel",
+    "Cockatoo",
+    "Conure",
+    "Eclectus",
+    "Lovebird",
+    "Macaw",
+    "Parrotlet",
+    "Quaker Parrot",
+    "Senegal Parrot",
+  ],
+  pigeon: [
+    "Fantail",
+    "Homing pigeon",
+    "Jacobin",
+    "King",
+    "Lahore",
+    "Modena",
+    "Nun",
+    "Racing Homer",
+    "Roller",
+    "Runt",
+  ],
+  fish: [
+    "Betta",
+    "Common goldfish",
+    "Fancy goldfish",
+    "Guppy",
+    "Molly",
+    "Platy",
+    "Swordtail",
+    "Angelfish",
+    "Corydoras",
+    "Gourami",
+    "Neon tetra",
+    "Zebra danio",
+  ],
+  turtle: [
+    "Red-eared slider",
+    "Painted turtle",
+    "Box turtle",
+    "Russian tortoise",
+    "Greek tortoise",
+    "Sulcata tortoise",
+    "Leopard tortoise",
+    "Musk turtle",
+  ],
+  lizard: [
+    "Bearded dragon",
+    "Leopard gecko",
+    "Crested gecko",
+    "Blue-tongued skink",
+    "Green iguana",
+    "Uromastyx",
+    "Anole",
+    "Chameleon",
+  ],
+  snake: [
+    "Corn snake",
+    "Ball python",
+    "Milk snake",
+    "King snake",
+    "Garter snake",
+    "Rosy boa",
+    "Western hognose",
+    "California kingsnake",
+  ],
 };
 
 const breedSources: Record<string, { label: string; href: string }[]> = {
-  dog: [{ label: "American Kennel Club dog breeds", href: "https://www.akc.org/dog-breeds/" }],
-  cat: [{ label: "The Cat Fanciers' Association recognized breeds", href: "https://cfa.org/breeds/" }],
-  rabbit: [{ label: "American Rabbit Breeders Association recognized breeds", href: "https://arba.net/recognized-breeds/" }],
-  chicken: [{ label: "The Livestock Conservancy poultry resources", href: "https://livestockconservancy.org/heritage-breeds/poultry-breeds/" }],
-  turkey: [{ label: "The Livestock Conservancy poultry resources", href: "https://livestockconservancy.org/heritage-breeds/poultry-breeds/" }],
-  duck: [{ label: "The Livestock Conservancy poultry resources", href: "https://livestockconservancy.org/heritage-breeds/poultry-breeds/" }],
-  goose: [{ label: "The Livestock Conservancy poultry resources", href: "https://livestockconservancy.org/heritage-breeds/poultry-breeds/" }],
+  dog: [
+    {
+      label: "American Kennel Club dog breeds",
+      href: "https://www.akc.org/dog-breeds/",
+    },
+  ],
+  cat: [
+    {
+      label: "The Cat Fanciers' Association recognized breeds",
+      href: "https://cfa.org/breeds/",
+    },
+  ],
+  rabbit: [
+    {
+      label: "American Rabbit Breeders Association recognized breeds",
+      href: "https://arba.net/recognized-breeds/",
+    },
+  ],
+  chicken: [
+    {
+      label: "The Livestock Conservancy poultry resources",
+      href: "https://livestockconservancy.org/heritage-breeds/poultry-breeds/",
+    },
+  ],
+  turkey: [
+    {
+      label: "The Livestock Conservancy poultry resources",
+      href: "https://livestockconservancy.org/heritage-breeds/poultry-breeds/",
+    },
+  ],
+  duck: [
+    {
+      label: "The Livestock Conservancy poultry resources",
+      href: "https://livestockconservancy.org/heritage-breeds/poultry-breeds/",
+    },
+  ],
+  goose: [
+    {
+      label: "The Livestock Conservancy poultry resources",
+      href: "https://livestockconservancy.org/heritage-breeds/poultry-breeds/",
+    },
+  ],
 };
 
 const pets = animalCatalog;
 
 const questions = [
-  { key: "home", label: "Where will your pet live?", help: "Think about the home you have now—not the one you might move into.", options: [{ value: "apartment", label: "Apartment / shared home" }, { value: "house", label: "House with more room" }, { value: "rural", label: "Rural / managed land" }] },
-  { key: "alone", label: "How long are they alone on a typical day?", help: "Include commute, classes, social plans, and sleepovers.", options: [{ value: "low", label: "0–4 hours" }, { value: "mid", label: "4–8 hours" }, { value: "high", label: "8+ hours" }] },
-  { key: "schedule", label: "How predictable is your weekly schedule?", help: "Consistency can matter as much as total free time.", options: [{ value: "steady", label: "Very predictable" }, { value: "mixed", label: "Some variation" }, { value: "chaotic", label: "Frequently changing" }] },
-  { key: "energy", label: "What activity rhythm feels sustainable?", help: "Choose the routine you can repeat on a tired Tuesday.", options: [{ value: "low", label: "Slow + cozy" }, { value: "mid", label: "A daily balance" }, { value: "high", label: "Outdoors + active" }] },
-  { key: "noise", label: "How important is a quiet home?", help: "Consider roommates, neighbors, and your own sensory needs.", options: [{ value: "high", label: "Very important" }, { value: "mid", label: "Some flexibility" }, { value: "low", label: "Noise is okay" }] },
-  { key: "budget", label: "How much room is in your monthly pet budget?", help: "Food is only one line: care, supplies, grooming, and unexpected vet costs count too.", options: [{ value: "low", label: "I need to keep costs lean" }, { value: "mid", label: "I can plan for routine care" }, { value: "high", label: "I have a strong cushion" }] },
-  { key: "emergency", label: "Could you handle an unexpected care bill?", help: "A savings plan, insurance, or a trusted support network can change the answer.", options: [{ value: "notyet", label: "Not comfortably yet" }, { value: "some", label: "With a plan" }, { value: "yes", label: "Yes, I have a cushion" }] },
-  { key: "experience", label: "How much animal-care experience do you have?", help: "Be honest—this helps avoid an overwhelming match.", options: [{ value: "first", label: "This would be my first" }, { value: "some", label: "I have some experience" }, { value: "experienced", label: "I’m experienced" }] },
-  { key: "household", label: "Who else shares the space?", help: "Allergies, children, older adults, and resident pets can change the fit.", options: [{ value: "solo", label: "Just me / adults" }, { value: "family", label: "Kids or older adults" }, { value: "pets", label: "Other pets already" }] },
-  { key: "allergies", label: "Are there allergies or sensitivities to plan around?", help: "There is no universally hypoallergenic animal; discuss concerns with a clinician.", options: [{ value: "none", label: "None known" }, { value: "mild", label: "Some sensitivities" }, { value: "significant", label: "Significant concern" }] },
-  { key: "commitment", label: "What length of commitment are you ready to make?", help: "Some animals can live for decades. Think beyond the next lease or semester.", options: [{ value: "short", label: "I need flexibility" }, { value: "long", label: "10+ years is realistic" }, { value: "lifelong", label: "I’m planning long-term" }] },
-  { key: "care", label: "How much hands-on care do you want?", help: "Include grooming, cleaning, training, habitat maintenance, and daily interaction.", options: [{ value: "low", label: "Simple routine" }, { value: "mid", label: "Regular hands-on care" }, { value: "high", label: "I enjoy intensive care" }] },
-  { key: "space", label: "How much dedicated animal space can you provide?", help: "A small animal is not automatically a small-space animal.", options: [{ value: "small", label: "One compact zone" }, { value: "medium", label: "A room or larger setup" }, { value: "large", label: "Outdoor / dedicated land" }] },
-  { key: "aesthetic", label: "How much should appearance influence the match?", help: "We intentionally keep this lower-weight than welfare and practical fit.", options: [{ value: "low", label: "Not a factor" }, { value: "some", label: "A small preference" }, { value: "high", label: "It matters to me" }] },
-  { key: "support", label: "Who could help if life changes suddenly?", help: "A trusted sitter, family member, boarding option, or professional support can make a plan more resilient.", options: [{ value: "none", label: "I would be figuring it out alone" }, { value: "some", label: "I have one or two options" }, { value: "strong", label: "I have a reliable support network" }] },
+  {
+    key: "home",
+    label: "Where will your pet live?",
+    help: "Think about the home you have now—not the one you might move into.",
+    options: [
+      { value: "apartment", label: "Apartment / shared home" },
+      { value: "house", label: "House with more room" },
+      { value: "rural", label: "Rural / managed land" },
+    ],
+  },
+  {
+    key: "alone",
+    label: "How long are they alone on a typical day?",
+    help: "Include commute, classes, social plans, and sleepovers.",
+    options: [
+      { value: "low", label: "0–4 hours" },
+      { value: "mid", label: "4–8 hours" },
+      { value: "high", label: "8+ hours" },
+    ],
+  },
+  {
+    key: "schedule",
+    label: "How predictable is your weekly schedule?",
+    help: "Consistency can matter as much as total free time.",
+    options: [
+      { value: "steady", label: "Very predictable" },
+      { value: "mixed", label: "Some variation" },
+      { value: "chaotic", label: "Frequently changing" },
+    ],
+  },
+  {
+    key: "energy",
+    label: "What activity rhythm feels sustainable?",
+    help: "Choose the routine you can repeat on a tired Tuesday.",
+    options: [
+      { value: "low", label: "Slow + cozy" },
+      { value: "mid", label: "A daily balance" },
+      { value: "high", label: "Outdoors + active" },
+    ],
+  },
+  {
+    key: "noise",
+    label: "How important is a quiet home?",
+    help: "Consider roommates, neighbors, and your own sensory needs.",
+    options: [
+      { value: "high", label: "Very important" },
+      { value: "mid", label: "Some flexibility" },
+      { value: "low", label: "Noise is okay" },
+    ],
+  },
+  {
+    key: "budget",
+    label: "How much room is in your monthly pet budget?",
+    help: "Food is only one line: care, supplies, grooming, and unexpected vet costs count too.",
+    options: [
+      { value: "low", label: "I need to keep costs lean" },
+      { value: "mid", label: "I can plan for routine care" },
+      { value: "high", label: "I have a strong cushion" },
+    ],
+  },
+  {
+    key: "emergency",
+    label: "Could you handle an unexpected care bill?",
+    help: "A savings plan, insurance, or a trusted support network can change the answer.",
+    options: [
+      { value: "notyet", label: "Not comfortably yet" },
+      { value: "some", label: "With a plan" },
+      { value: "yes", label: "Yes, I have a cushion" },
+    ],
+  },
+  {
+    key: "experience",
+    label: "How much animal-care experience do you have?",
+    help: "Be honest—this helps avoid an overwhelming match.",
+    options: [
+      { value: "first", label: "This would be my first" },
+      { value: "some", label: "I have some experience" },
+      { value: "experienced", label: "I’m experienced" },
+    ],
+  },
+  {
+    key: "household",
+    label: "Who else shares the space?",
+    help: "Allergies, children, older adults, and resident pets can change the fit.",
+    options: [
+      { value: "solo", label: "Just me / adults" },
+      { value: "family", label: "Kids or older adults" },
+      { value: "pets", label: "Other pets already" },
+    ],
+  },
+  {
+    key: "allergies",
+    label: "Are there allergies or sensitivities to plan around?",
+    help: "There is no universally hypoallergenic animal; discuss concerns with a clinician.",
+    options: [
+      { value: "none", label: "None known" },
+      { value: "mild", label: "Some sensitivities" },
+      { value: "significant", label: "Significant concern" },
+    ],
+  },
+  {
+    key: "commitment",
+    label: "What length of commitment are you ready to make?",
+    help: "Some animals can live for decades. Think beyond the next lease or semester.",
+    options: [
+      { value: "short", label: "I need flexibility" },
+      { value: "long", label: "10+ years is realistic" },
+      { value: "lifelong", label: "I’m planning long-term" },
+    ],
+  },
+  {
+    key: "care",
+    label: "How much hands-on care do you want?",
+    help: "Include grooming, cleaning, training, habitat maintenance, and daily interaction.",
+    options: [
+      { value: "low", label: "Simple routine" },
+      { value: "mid", label: "Regular hands-on care" },
+      { value: "high", label: "I enjoy intensive care" },
+    ],
+  },
+  {
+    key: "space",
+    label: "How much dedicated animal space can you provide?",
+    help: "A small animal is not automatically a small-space animal.",
+    options: [
+      { value: "small", label: "One compact zone" },
+      { value: "medium", label: "A room or larger setup" },
+      { value: "large", label: "Outdoor / dedicated land" },
+    ],
+  },
+  {
+    key: "aesthetic",
+    label: "How much should appearance influence the match?",
+    help: "We intentionally keep this lower-weight than welfare and practical fit.",
+    options: [
+      { value: "low", label: "Not a factor" },
+      { value: "some", label: "A small preference" },
+      { value: "high", label: "It matters to me" },
+    ],
+  },
+  {
+    key: "support",
+    label: "Who could help if life changes suddenly?",
+    help: "A trusted sitter, family member, boarding option, or professional support can make a plan more resilient.",
+    options: [
+      { value: "none", label: "I would be figuring it out alone" },
+      { value: "some", label: "I have one or two options" },
+      { value: "strong", label: "I have a reliable support network" },
+    ],
+  },
 ];
 
-function scorePet(pet: typeof animalCatalog[number], answers: Record<string, string>) {
+function scorePet(
+  pet: (typeof animalCatalog)[number],
+  answers: Record<string, string>
+) {
   let score = 50;
-  if (answers.home === "apartment") score += ["dog", "horse", "goat", "sheep", "pig", "cow", "donkey", "camel", "yak"].includes(pet.id) ? -16 : 0;
-  if (answers.home === "rural") score += ["horse", "goat", "sheep", "pig", "cow", "donkey", "llama", "alpaca", "camel", "yak", "water-buffalo", "chicken", "duck", "goose"].includes(pet.id) ? 14 : -3;
+  if (answers.home === "apartment")
+    score += [
+      "dog",
+      "horse",
+      "goat",
+      "sheep",
+      "pig",
+      "cow",
+      "donkey",
+      "camel",
+      "yak",
+    ].includes(pet.id)
+      ? -16
+      : 0;
+  if (answers.home === "rural")
+    score += [
+      "horse",
+      "goat",
+      "sheep",
+      "pig",
+      "cow",
+      "donkey",
+      "llama",
+      "alpaca",
+      "camel",
+      "yak",
+      "water-buffalo",
+      "chicken",
+      "duck",
+      "goose",
+    ].includes(pet.id)
+      ? 14
+      : -3;
   if (answers.alone === "high") score += pet.alone >= 4 ? 15 : -18;
   if (answers.alone === "low") score += pet.alone <= 2 ? 6 : 0;
   if (answers.energy === "high") score += pet.energy >= 3 ? 12 : -8;
   if (answers.energy === "low") score += pet.energy <= 2 ? 12 : -4;
-  if (answers.noise === "high") score += ["fish", "cat", "snake", "turtle", "lizard"].includes(pet.id) ? 8 : ["dog", "parrot", "goose"].includes(pet.id) ? -8 : 2;
+  if (answers.noise === "high")
+    score += ["fish", "cat", "snake", "turtle", "lizard"].includes(pet.id)
+      ? 8
+      : ["dog", "parrot", "goose"].includes(pet.id)
+        ? -8
+        : 2;
   if (answers.budget === "low") score += pet.care === "moderate" ? 5 : -8;
   if (answers.emergency === "notyet") score += pet.care === "moderate" ? 3 : -8;
   if (answers.experience === "first") score += pet.care === "moderate" ? 4 : -5;
   if (answers.household === "pets") score += pet.id === "fish" ? 3 : -3;
-  if (answers.allergies === "significant") score += ["fish", "lizard", "snake", "turtle"].includes(pet.id) ? 7 : -6;
-  if (answers.commitment === "short") score += ["fish", "hamster", "mouse", "rat", "gerbil"].includes(pet.id) ? 3 : -6;
+  if (answers.allergies === "significant")
+    score += ["fish", "lizard", "snake", "turtle"].includes(pet.id) ? 7 : -6;
+  if (answers.commitment === "short")
+    score += ["fish", "hamster", "mouse", "rat", "gerbil"].includes(pet.id)
+      ? 3
+      : -6;
   if (answers.space === "large") score += pet.alone <= 2 ? 8 : 0;
-  if (answers.space === "small") score += ["fish", "cat", "hamster", "mouse", "rat", "gerbil", "canary", "finch"].includes(pet.id) ? 5 : -5;
+  if (answers.space === "small")
+    score += [
+      "fish",
+      "cat",
+      "hamster",
+      "mouse",
+      "rat",
+      "gerbil",
+      "canary",
+      "finch",
+    ].includes(pet.id)
+      ? 5
+      : -5;
   if (answers.care === "high") score += pet.care === "high" ? 7 : -2;
   if (answers.care === "low") score += pet.care === "moderate" ? 5 : -6;
   if (answers.support === "none") score += pet.alone >= 4 ? 5 : -2;
@@ -148,38 +1078,774 @@ function scorePet(pet: typeof animalCatalog[number], answers: Record<string, str
 
 function Header() {
   const [open, setOpen] = useState(false);
-  return <header className="site-header"><div className="container nav-wrap"><Link href="/" className="brand" aria-label="Petwise home"><span className="brand-mark"><Leaf size={17} /></span><span>petwise</span></Link><nav className={open ? "nav-links nav-open" : "nav-links"} aria-label="Primary navigation"><Link href="/quiz" onClick={() => setOpen(false)}>Find your fit</Link><Link href="/compatibility" onClick={() => setOpen(false)}>Multi-pet guide</Link><Link href="/care" onClick={() => setOpen(false)}>Care library</Link></nav><button className="icon-button menu-button" aria-label={open ? "Close menu" : "Open menu"} onClick={() => setOpen(!open)}>{open ? <X size={21} /> : <Menu size={21} />}</button><Link href="/quiz" className="header-cta">Start quiz <ArrowRight size={16} /></Link></div></header>;
+  return (
+    <header className="site-header">
+      <div className="container nav-wrap">
+        <Link href="/" className="brand" aria-label="Petwise home">
+          <span className="brand-mark">
+            <Leaf size={17} />
+          </span>
+          <span>petwise</span>
+        </Link>
+        <nav
+          className={open ? "nav-links nav-open" : "nav-links"}
+          aria-label="Primary navigation"
+        >
+          <Link href="/quiz" onClick={() => setOpen(false)}>
+            Find your fit
+          </Link>
+          <Link href="/compatibility" onClick={() => setOpen(false)}>
+            Multi-pet guide
+          </Link>
+          <Link href="/care" onClick={() => setOpen(false)}>
+            Care library
+          </Link>
+        </nav>
+        <button
+          className="icon-button menu-button"
+          aria-label={open ? "Close menu" : "Open menu"}
+          onClick={() => setOpen(!open)}
+        >
+          {open ? <X size={21} /> : <Menu size={21} />}
+        </button>
+        <Link href="/quiz" className="header-cta">
+          Start quiz <ArrowRight size={16} />
+        </Link>
+      </div>
+    </header>
+  );
 }
 
-function Footer() { return <footer className="footer"><div className="container footer-grid"><div><Link href="/" className="brand"><span className="brand-mark"><Leaf size={17} /></span><span>petwise</span></Link><p className="footer-note">A calmer starting point for a lifelong animal commitment.</p></div><div><p className="footer-label">Explore</p><Link href="/quiz">Pet-match quiz</Link><Link href="/compatibility">Multi-pet guide</Link><Link href="/care">Care library</Link></div><div><p className="footer-label">Trust & transparency</p><Link href="/policies/privacy">Privacy policy</Link><Link href="/policies/cookies">Cookies policy</Link><Link href="/policies/terms">Terms of use</Link></div></div><div className="container footer-bottom"><span>© 2026 Petwise. Informational product, not a veterinary service.</span><span className="no-tracking"><ShieldCheck size={14} /> No analytics by default</span></div></footer>; }
+function Footer() {
+  return (
+    <footer className="footer">
+      <div className="container footer-grid">
+        <div>
+          <Link href="/" className="brand">
+            <span className="brand-mark">
+              <Leaf size={17} />
+            </span>
+            <span>petwise</span>
+          </Link>
+          <p className="footer-note">
+            A calmer starting point for a lifelong animal commitment.
+          </p>
+        </div>
+        <div>
+          <p className="footer-label">Explore</p>
+          <Link href="/quiz">Pet-match quiz</Link>
+          <Link href="/compatibility">Multi-pet guide</Link>
+          <Link href="/care">Care library</Link>
+        </div>
+        <div>
+          <p className="footer-label">Trust & transparency</p>
+          <Link href="/policies/privacy">Privacy policy</Link>
+          <Link href="/policies/cookies">Cookies policy</Link>
+          <Link href="/policies/terms">Terms of use</Link>
+        </div>
+      </div>
+      <div className="container footer-bottom">
+        <span>
+          © 2026 Petwise. Informational product, not a veterinary service.
+        </span>
+        <span className="no-tracking">
+          <ShieldCheck size={14} /> No analytics by default
+        </span>
+      </div>
+    </footer>
+  );
+}
 
-function Disclaimer({ compact = false }: { compact?: boolean }) { return <div className={compact ? "disclaimer compact" : "disclaimer"}><CircleHelp size={18} /><p><strong>Good to know:</strong> Petwise is general educational guidance, not a diagnosis or treatment plan. For health concerns, contact a licensed veterinarian.</p></div>; }
+function Disclaimer({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className={compact ? "disclaimer compact" : "disclaimer"}>
+      <CircleHelp size={18} />
+      <p>
+        <strong>Good to know:</strong> Petwise is general educational guidance,
+        not a diagnosis or treatment plan. For health concerns, contact a
+        licensed veterinarian.
+      </p>
+    </div>
+  );
+}
 
-function HomePage() { usePageTitle("Petwise — find the pet that fits your real life"); return <><Header /><main><section className="hero"><div className="container hero-grid"><div className="hero-copy"><div className="eyebrow"><Sparkles size={15} /> welfare-first, always</div><h1>Find the pet that fits your <em>real life.</em></h1><p className="hero-lede">A considered starting point for first-time pet people. Match your routine, space, energy, and budget to the kind of care an animal actually needs.</p><div className="hero-actions"><Link href="/quiz" className="button button-dark">Take the 2-minute quiz <ArrowRight size={17} /></Link><a href="#how-it-works" className="text-link">See how it works <ChevronDown size={16} /></a></div><p className="microcopy"><ShieldCheck size={14} /> Your answers stay in your browser. No account required.</p></div><div className="hero-art" aria-label="Abstract illustration of a cat, dog, rabbit, and fish"><div className="orbit orbit-one" /><div className="orbit orbit-two" /><div className="pet-sticker sticker-cat">🐈<small>curious</small></div><div className="pet-sticker sticker-dog">🐕<small>loyal</small></div><div className="pet-sticker sticker-rabbit">🐇<small>gentle</small></div><div className="pet-sticker sticker-fish">🐟<small>serene</small></div><div className="art-center"><Heart size={28} fill="currentColor" /><span>care<br />comes first</span></div></div></div></section><section className="signal-strip"><div className="container signal-grid"><div><strong>15</strong><span>thoughtful questions</span></div><div><strong>0</strong><span>fake reviews or inflated claims</span></div><div><strong>100%</strong><span>offline-first quiz logic</span></div></div></section><section id="how-it-works" className="section section-light"><div className="container"><div className="section-heading"><div><span className="eyebrow">A better first step</span><h2>Pretty useful. Actually honest.</h2></div><p>Pet content can be aesthetic without making animal welfare an afterthought. Petwise keeps the practical parts visible.</p></div><div className="feature-grid"><Feature icon={<Sparkles />} number="01" title="Match your routine" text="A deterministic quiz weighs time, space, noise, energy, and budget before aesthetics." href="/quiz" /><Feature icon={<Heart />} number="02" title="See the tradeoffs" text="Explore what changes when you add a second animal—cost, introductions, space, and time." href="/compatibility" /><Feature icon={<ShieldCheck />} number="03" title="Learn from sources" text="Care notes point to public guidance from AVMA, AAHA, and ASPCA. No invented vet bylines." href="/care" /></div></div></section><section className="section quote-section"><div className="container quote-grid"><div className="quote-mark">“</div><blockquote>Choose the care you can sustain, not the aesthetic you can post.</blockquote><div className="quote-caption">The Petwise rule of thumb</div></div></section></main><Footer /></>; }
+function HomePage() {
+  usePageTitle("Petwise — find the pet that fits your real life");
+  return (
+    <>
+      <Header />
+      <main>
+        <section className="hero">
+          <div className="container hero-grid">
+            <div className="hero-copy">
+              <div className="eyebrow">
+                <Sparkles size={15} /> welfare-first, always
+              </div>
+              <h1>
+                Find the pet that fits your <em>real life.</em>
+              </h1>
+              <p className="hero-lede">
+                A considered starting point for first-time pet people. Match
+                your routine, space, energy, and budget to the kind of care an
+                animal actually needs.
+              </p>
+              <div className="hero-actions">
+                <Link href="/quiz" className="button button-dark">
+                  Take the 2-minute quiz <ArrowRight size={17} />
+                </Link>
+                <a href="#how-it-works" className="text-link">
+                  See how it works <ChevronDown size={16} />
+                </a>
+              </div>
+              <p className="microcopy">
+                <ShieldCheck size={14} /> Your answers stay in your browser. No
+                account required.
+              </p>
+            </div>
+            <div
+              className="hero-art"
+              aria-label="Abstract illustration of a cat, dog, rabbit, and fish"
+            >
+              <div className="orbit orbit-one" />
+              <div className="orbit orbit-two" />
+              <div className="pet-sticker sticker-cat">
+                🐈<small>curious</small>
+              </div>
+              <div className="pet-sticker sticker-dog">
+                🐕<small>loyal</small>
+              </div>
+              <div className="pet-sticker sticker-rabbit">
+                🐇<small>gentle</small>
+              </div>
+              <div className="pet-sticker sticker-fish">
+                🐟<small>serene</small>
+              </div>
+              <div className="art-center">
+                <Heart size={28} fill="currentColor" />
+                <span>
+                  care
+                  <br />
+                  comes first
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section className="signal-strip">
+          <div className="container signal-grid">
+            <div>
+              <strong>15</strong>
+              <span>thoughtful questions</span>
+            </div>
+            <div>
+              <strong>0</strong>
+              <span>fake reviews or inflated claims</span>
+            </div>
+            <div>
+              <strong>100%</strong>
+              <span>offline-first quiz logic</span>
+            </div>
+          </div>
+        </section>
+        <section id="how-it-works" className="section section-light">
+          <div className="container">
+            <div className="section-heading">
+              <div>
+                <span className="eyebrow">A better first step</span>
+                <h2>Pretty useful. Actually honest.</h2>
+              </div>
+              <p>
+                Pet content can be aesthetic without making animal welfare an
+                afterthought. Petwise keeps the practical parts visible.
+              </p>
+            </div>
+            <div className="feature-grid">
+              <Feature
+                icon={<Sparkles />}
+                number="01"
+                title="Match your routine"
+                text="A deterministic quiz weighs time, space, noise, energy, and budget before aesthetics."
+                href="/quiz"
+              />
+              <Feature
+                icon={<Heart />}
+                number="02"
+                title="See the tradeoffs"
+                text="Explore what changes when you add a second animal—cost, introductions, space, and time."
+                href="/compatibility"
+              />
+              <Feature
+                icon={<ShieldCheck />}
+                number="03"
+                title="Learn from sources"
+                text="Care notes point to public guidance from AVMA, AAHA, and ASPCA. No invented vet bylines."
+                href="/care"
+              />
+            </div>
+          </div>
+        </section>
+        <section className="section quote-section">
+          <div className="container quote-grid">
+            <div className="quote-mark">“</div>
+            <blockquote>
+              Choose the care you can sustain, not the aesthetic you can post.
+            </blockquote>
+            <div className="quote-caption">The Petwise rule of thumb</div>
+          </div>
+        </section>
+      </main>
+      <Footer />
+    </>
+  );
+}
 
-function Feature({ icon, number, title, text, href }: { icon: React.ReactNode; number: string; title: string; text: string; href: string }) { return <Link href={href} className="feature-card"><div className="feature-top"><span className="feature-icon">{icon}</span><span className="feature-number">{number}</span></div><h3>{title}</h3><p>{text}</p><span className="feature-arrow"><ArrowRight size={17} /></span></Link>; }
+function Feature({
+  icon,
+  number,
+  title,
+  text,
+  href,
+}: {
+  icon: React.ReactNode;
+  number: string;
+  title: string;
+  text: string;
+  href: string;
+}) {
+  return (
+    <Link href={href} className="feature-card">
+      <div className="feature-top">
+        <span className="feature-icon">{icon}</span>
+        <span className="feature-number">{number}</span>
+      </div>
+      <h3>{title}</h3>
+      <p>{text}</p>
+      <span className="feature-arrow">
+        <ArrowRight size={17} />
+      </span>
+    </Link>
+  );
+}
 
-function QuizPage() { usePageTitle("Pet-match quiz — Petwise"); const [step, setStep] = useState(0); const [answers, setAnswers] = useState<Record<string, string>>({}); const done = step >= questions.length; const results = useMemo(() => animalCatalog.map(p => ({ ...p, score: scorePet(p, answers) })).sort((a, b) => b.score - a.score), [answers]); const question = questions[step]; if (done) return <><Header /><main className="quiz-shell"><div className="container results-wrap"><Link href="/quiz" className="back-link" onClick={() => { setStep(0); setAnswers({}); }}><ChevronLeft size={17} /> Retake quiz</Link><div className="results-header"><span className="eyebrow">your compatibility ranking</span><h1>More questions.<br /><em>More honest fit.</em></h1><p>Every animal is ranked from highest to lowest compatibility with your answers. This is a screening estimate—not a scientific probability, guarantee, diagnosis, or substitute for meeting the animal and talking with a qualified care professional.</p></div>{answers.energy === "high" && answers.alone === "high" && <div className="tension"><span>Worth pausing on</span><strong>High energy + 8+ hours alone can be a real tension.</strong><p>Consider whether enrichment, exercise help, pet sitting, or a different animal would make the commitment healthier.</p></div>}<div className="result-list">{results.slice(0, 5).map((p, i) => <article className="result-card" key={p.id}><div className="result-rank">#{i + 1}</div><div className="result-emoji" style={{ background: p.color }}>{p.emoji}</div><div className="result-content"><div className="result-title"><div><span className="eyebrow">{p.group} · compatibility</span><h2>{p.name}</h2></div><span className="fit-score">{p.score}%</span></div><p><strong>Why it ranks here:</strong> {p.name} may align with the rhythm you described, provided you can meet its species-specific needs and arrange appropriate care.</p><div className="honesty"><strong>Compatibility notes</strong><span>{p.note}</span></div><Link className="source-link breed-cta" href={`/breeds/${p.id}`}>Explore {p.name} breeds and varieties <ArrowRight size={15} /></Link></div></article>)}</div><div className="ranking-table"><h2>Complete ranking</h2>{results.slice(5).map((p, i) => <div className="ranking-row" key={p.id}><span>#{i + 6}</span><span>{p.emoji} {p.name}</span><strong>{p.score}%</strong></div>)}</div><Disclaimer /></div></main><Footer /></>; return <><Header /><main className="quiz-shell"><div className="container quiz-wrap"><div className="quiz-progress"><span>Pet-match quiz</span><span>{step + 1} / {questions.length}</span></div><div className="progress-bar"><span style={{ width: `${((step + 1) / questions.length) * 100}%` }} /></div><div className="question-card"><span className="eyebrow">question {String(step + 1).padStart(2, "0")}</span><h1>{question.label}</h1><p>{question.help}</p><div className="option-list" role="group" aria-label={question.label}>{question.options.map(o => <button key={o.value} className={answers[question.key] === o.value ? "option selected" : "option"} onClick={() => { setAnswers({ ...answers, [question.key]: o.value }); setTimeout(() => setStep(step + 1), 140); }}><span>{o.label}</span>{answers[question.key] === o.value && <Check size={18} />}</button>)}</div><button className="skip-button" onClick={() => setStep(step + 1)}>Skip this question <ArrowRight size={15} /></button></div><div className="quiz-footer"><button className="back-link" disabled={step === 0} onClick={() => setStep(step - 1)}><ChevronLeft size={17} /> Back</button><span><ShieldCheck size={14} /> Nothing leaves this device</span></div></div></main></>; }
-function BreedExplorer({ animalId }: { animalId: string }) { const [, setLocation] = useLocation(); const animal = animalCatalog.find(p => p.id === animalId) || animalCatalog[0]; usePageTitle(`${animal.name} breeds and varieties — Petwise`); const [search, setSearch] = useState(""); const breeds = (breedLists[animal.id] || []).filter(b => b.toLowerCase().includes(search.toLowerCase())); return <><Header /><main className="section section-light"><div className="container narrow"><Link href="/quiz" className="back-link"><ChevronLeft size={17} /> Back to quiz results</Link><div className="breed-hero"><span className="result-emoji" style={{ background: animal.color }}>{animal.emoji}</span><div><span className="eyebrow">breed explorer · {animal.group}</span><h1>{animal.name} breeds<br /><em>and varieties.</em></h1><p className="lede">A broad starting list of recognized or commonly documented varieties. Registries differ by country and organization; a breed name never replaces an individual animal's care assessment.</p></div></div><div className="breed-toolbar"><label htmlFor="breed-search">Search this list<input id="breed-search" value={search} onChange={e => setSearch(e.target.value)} placeholder={`Search ${animal.name.toLowerCase()} breeds`} /></label><label htmlFor="animal-select">Explore another animal<select id="animal-select" value={animal.id} onChange={e => setLocation(`/breeds/${e.target.value}`)}>{animalCatalog.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label></div><div className="breed-grid">{breeds.map(breed => <div className="breed-chip" key={breed}>{breed}</div>)}</div>{breeds.length === 0 && <p className="empty-state">No breed in this starting list matches “{search}”. Try a broader spelling or choose another animal.</p>}<p className="catalog-note">Petwise does not claim this list is exhaustive worldwide. The list is intended for discovery and should be checked against a relevant registry, rescue, breeder, or veterinary professional before making a decision.</p>{breedSources[animal.id] && <div className="registry-links"><strong>Registry references</strong>{breedSources[animal.id].map(source => <a key={source.href} href={source.href} target="_blank" rel="noreferrer">{source.label} <ExternalLink size={13} /></a>)}</div>}<Disclaimer /></div></main><Footer /></>; }
+function QuizPage() {
+  usePageTitle("Pet-match quiz — Petwise");
+  const [step, setStep] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const done = step >= questions.length;
+  const results = useMemo(
+    () =>
+      animalCatalog
+        .map(p => ({ ...p, score: scorePet(p, answers) }))
+        .sort((a, b) => b.score - a.score),
+    [answers]
+  );
+  const question = questions[step];
+  if (done)
+    return (
+      <>
+        <Header />
+        <main className="quiz-shell">
+          <div className="container results-wrap">
+            <Link
+              href="/quiz"
+              className="back-link"
+              onClick={() => {
+                setStep(0);
+                setAnswers({});
+              }}
+            >
+              <ChevronLeft size={17} /> Retake quiz
+            </Link>
+            <div className="results-header">
+              <span className="eyebrow">your compatibility ranking</span>
+              <h1>
+                More questions.
+                <br />
+                <em>More honest fit.</em>
+              </h1>
+              <p>
+                Every animal is ranked from highest to lowest compatibility with
+                your answers. This is a screening estimate—not a scientific
+                probability, guarantee, diagnosis, or substitute for meeting the
+                animal and talking with a qualified care professional.
+              </p>
+            </div>
+            {answers.energy === "high" && answers.alone === "high" && (
+              <div className="tension">
+                <span>Worth pausing on</span>
+                <strong>
+                  High energy + 8+ hours alone can be a real tension.
+                </strong>
+                <p>
+                  Consider whether enrichment, exercise help, pet sitting, or a
+                  different animal would make the commitment healthier.
+                </p>
+              </div>
+            )}
+            <div className="result-list">
+              {results.slice(0, 5).map((p, i) => (
+                <article className="result-card" key={p.id}>
+                  <div className="result-rank">#{i + 1}</div>
+                  <div className="result-emoji" style={{ background: p.color }}>
+                    {p.emoji}
+                  </div>
+                  <div className="result-content">
+                    <div className="result-title">
+                      <div>
+                        <span className="eyebrow">
+                          {p.group} · compatibility
+                        </span>
+                        <h2>{p.name}</h2>
+                      </div>
+                      <span className="fit-score">{p.score}%</span>
+                    </div>
+                    <p>
+                      <strong>Why it ranks here:</strong> {p.name} may align
+                      with the rhythm you described, provided you can meet its
+                      species-specific needs and arrange appropriate care.
+                    </p>
+                    <div className="honesty">
+                      <strong>Compatibility notes</strong>
+                      <span>{p.note}</span>
+                    </div>
+                    <Link
+                      className="source-link breed-cta"
+                      href={`/breeds/${p.id}`}
+                    >
+                      Explore {p.name} breeds and varieties{" "}
+                      <ArrowRight size={15} />
+                    </Link>
+                  </div>
+                </article>
+              ))}
+            </div>
+            <div className="ranking-table">
+              <h2>Complete ranking</h2>
+              {results.slice(5).map((p, i) => (
+                <div className="ranking-row" key={p.id}>
+                  <span>#{i + 6}</span>
+                  <span>
+                    {p.emoji} {p.name}
+                  </span>
+                  <strong>{p.score}%</strong>
+                </div>
+              ))}
+            </div>
+            <Disclaimer />
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  return (
+    <>
+      <Header />
+      <main className="quiz-shell">
+        <div className="container quiz-wrap">
+          <div className="quiz-progress">
+            <span>Pet-match quiz</span>
+            <span>
+              {step + 1} / {questions.length}
+            </span>
+          </div>
+          <div className="progress-bar">
+            <span
+              style={{ width: `${((step + 1) / questions.length) * 100}%` }}
+            />
+          </div>
+          <div className="question-card">
+            <span className="eyebrow">
+              question {String(step + 1).padStart(2, "0")}
+            </span>
+            <h1>{question.label}</h1>
+            <p>{question.help}</p>
+            <div
+              className="option-list"
+              role="group"
+              aria-label={question.label}
+            >
+              {question.options.map(o => (
+                <button
+                  key={o.value}
+                  className={
+                    answers[question.key] === o.value
+                      ? "option selected"
+                      : "option"
+                  }
+                  onClick={() => {
+                    setAnswers({ ...answers, [question.key]: o.value });
+                    setTimeout(() => setStep(step + 1), 140);
+                  }}
+                >
+                  <span>{o.label}</span>
+                  {answers[question.key] === o.value && <Check size={18} />}
+                </button>
+              ))}
+            </div>
+            <button className="skip-button" onClick={() => setStep(step + 1)}>
+              Skip this question <ArrowRight size={15} />
+            </button>
+          </div>
+          <div className="quiz-footer">
+            <button
+              className="back-link"
+              disabled={step === 0}
+              onClick={() => setStep(step - 1)}
+            >
+              <ChevronLeft size={17} /> Back
+            </button>
+            <span>
+              <ShieldCheck size={14} /> Nothing leaves this device
+            </span>
+          </div>
+        </div>
+      </main>
+    </>
+  );
+}
+function BreedExplorer({ animalId }: { animalId: string }) {
+  const [, setLocation] = useLocation();
+  const animal = animalCatalog.find(p => p.id === animalId) || animalCatalog[0];
+  usePageTitle(`${animal.name} breeds and varieties — Petwise`);
+  const [search, setSearch] = useState("");
+  const breeds = (breedLists[animal.id] || []).filter(b =>
+    b.toLowerCase().includes(search.toLowerCase())
+  );
+  return (
+    <>
+      <Header />
+      <main className="section section-light">
+        <div className="container narrow">
+          <Link href="/quiz" className="back-link">
+            <ChevronLeft size={17} /> Back to quiz results
+          </Link>
+          <div className="breed-hero">
+            <span className="result-emoji" style={{ background: animal.color }}>
+              {animal.emoji}
+            </span>
+            <div>
+              <span className="eyebrow">breed explorer · {animal.group}</span>
+              <h1>
+                {animal.name} breeds
+                <br />
+                <em>and varieties.</em>
+              </h1>
+              <p className="lede">
+                A broad starting list of recognized or commonly documented
+                varieties. Registries differ by country and organization; a
+                breed name never replaces an individual animal's care
+                assessment.
+              </p>
+            </div>
+          </div>
+          <div className="breed-toolbar">
+            <label htmlFor="breed-search">
+              Search this list
+              <input
+                id="breed-search"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder={`Search ${animal.name.toLowerCase()} breeds`}
+              />
+            </label>
+            <label htmlFor="animal-select">
+              Explore another animal
+              <select
+                id="animal-select"
+                value={animal.id}
+                onChange={e => setLocation(`/breeds/${e.target.value}`)}
+              >
+                {animalCatalog.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="breed-grid">
+            {breeds.map(breed => (
+              <div className="breed-chip" key={breed}>
+                {breed}
+              </div>
+            ))}
+          </div>
+          {breeds.length === 0 && (
+            <p className="empty-state">
+              No breed in this starting list matches “{search}”. Try a broader
+              spelling or choose another animal.
+            </p>
+          )}
+          <p className="catalog-note">
+            Petwise does not claim this list is exhaustive worldwide. The list
+            is intended for discovery and should be checked against a relevant
+            registry, rescue, breeder, or veterinary professional before making
+            a decision.
+          </p>
+          {breedSources[animal.id] && (
+            <div className="registry-links">
+              <strong>Registry references</strong>
+              {breedSources[animal.id].map(source => (
+                <a
+                  key={source.href}
+                  href={source.href}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {source.label} <ExternalLink size={13} />
+                </a>
+              ))}
+            </div>
+          )}
+          <Disclaimer />
+        </div>
+      </main>
+      <Footer />
+    </>
+  );
+}
 
-function compatibilityScore(ids: string[], same: boolean) { const chosen = ids.map(id => animalCatalog.find(p => p.id === id)).filter(Boolean) as typeof animalCatalog; if (chosen.length < 2) return 0; let score = same ? 84 : 70; const avgEnergy = chosen.reduce((sum, p) => sum + p.energy, 0) / chosen.length; const energySpread = Math.max(...chosen.map(p => p.energy)) - Math.min(...chosen.map(p => p.energy)); score -= energySpread * 5; score -= Math.max(0, chosen.length - 2) * 4; if (chosen.some(p => p.group === "Farm animals") && chosen.some(p => p.group === "Reptiles")) score -= 14; if (chosen.some(p => p.id === "dog") && chosen.some(p => ["snake", "fish", "chicken"].includes(p.id))) score -= 8; if (avgEnergy > 3.5) score -= 4; return Math.max(18, Math.min(96, Math.round(score))); }
-
-function CompatibilityPage() { usePageTitle("Multi-pet household guide — Petwise"); const [count, setCount] = useState(2); const [same, setSame] = useState(false); const [ids, setIds] = useState(["cat", "dog"]); const chosenScore = compatibilityScore(ids, same); const setCountAndOptions = (value: number) => { setCount(value); setIds(Array.from({ length: value }, (_, i) => ids[i] || (same ? ids[0] || "cat" : animalCatalog[i % animalCatalog.length].id))); }; return <><Header /><main className="section section-light"><div className="container narrow"><span className="eyebrow">multi-pet household guide</span><h1>Build the household<br /><em>before the aesthetic.</em></h1><p className="lede">Choose the number of animals, then model a same-species or mixed-species household. The percentage is a transparent heuristic informed by welfare guidance—not a guarantee that individual animals will get along.</p><div className="checker"><div className="household-step"><span className="step-label">1 · How many animals?</span><div className="count-pills">{[2,3,4,5,6].map(n => <button key={n} className={count === n ? "count-pill selected" : "count-pill"} onClick={() => setCountAndOptions(n)}>{n}</button>)}</div></div><div className="household-step"><span className="step-label">2 · Same or different animals?</span><div className="mode-pills"><button className={same ? "mode-pill" : "mode-pill selected"} onClick={() => { setSame(false); setIds(ids.map((id, i) => id || animalCatalog[i % animalCatalog.length].id)); }}>Different animals</button><button className={same ? "mode-pill selected" : "mode-pill"} onClick={() => { setSame(true); setIds(Array(count).fill(ids[0] || "cat")); }}>Same animal</button></div></div><div className="household-step"><span className="step-label">3 · Choose {count} {same ? "animals of the same type" : "animals"}</span><div className="animal-picker-grid">{ids.map((id, index) => <label key={index}>Animal {index + 1}<select value={id} onChange={e => { const next = [...ids]; next[index] = e.target.value; setIds(next); }}>{animalCatalog.map(p => <option key={p.id} value={p.id}>{p.emoji} {p.name}</option>)}</select></label>)}</div></div><div className={chosenScore < 50 ? "compat-result caution" : "compat-result"}><span className="result-pill">Estimated compatibility</span><strong className="compat-score">{chosenScore}%</strong><h2>{chosenScore >= 75 ? "A promising starting profile—with introductions still required." : chosenScore >= 50 ? "Possible, but needs careful planning and separate resources." : "High-caution combination: seek specialist guidance before committing."}</h2><p>Score factors include social needs, energy mismatch, species-group differences, household size, and basic welfare constraints. Individual age, health, sex, temperament, history, space, and legal requirements can change the result.</p></div></div><div className="guide-grid"><Guide title="Space + resources" text="Plan duplicates of key resources where appropriate: resting spots, feeding areas, litter or toileting setups, and hiding places." /><Guide title="Time + cost" text="More animals can mean non-linear costs when emergencies, boarding, insurance, or species-specific supplies enter the picture." /><Guide title="Introductions" text="Move at the animals' pace. A reputable shelter, behavior professional, or veterinarian can help with a difficult match." /></div><p className="source-footnote">Scoring is informed by public guidance from ASPCA, RSPCA, Merck Veterinary Manual, and AVMA. These sources support welfare and care principles; none publishes this exact percentage formula.</p><Disclaimer /></div></main><Footer /></>; }
-function Guide({ title, text }: { title: string; text: string }) { return <div className="guide-card"><span className="guide-dot" /><h3>{title}</h3><p>{text}</p></div>; }
+function CompatibilityPage() {
+  usePageTitle("Multi-pet household guide — Petwise");
+  const [count, setCount] = useState(2);
+  const [same, setSame] = useState(false);
+  const [ids, setIds] = useState(["cat", "dog"]);
+  const result = householdScore(ids, same);
+  const setCountAndOptions = (value: number) => {
+    setCount(value);
+    setIds(
+      Array.from(
+        { length: value },
+        (_, i) =>
+          ids[i] ||
+          (same ? ids[0] || "cat" : animalCatalog[i % animalCatalog.length].id)
+      )
+    );
+  };
+  const headline =
+    result.score >= 75
+      ? "A promising starting profile—with introductions still required."
+      : result.score >= 50
+        ? "Possible, but needs careful planning and separate resources."
+        : "High-caution combination: seek specialist guidance before committing.";
+  return (
+    <>
+      <Header />
+      <main className="section section-light">
+        <div className="container narrow">
+          <span className="eyebrow">multi-pet household guide</span>
+          <h1>
+            Build the household
+            <br />
+            <em>before the aesthetic.</em>
+          </h1>
+          <p className="lede">
+            Choose the number of animals, then model a same-species or
+            mixed-species household. Scores are driven by real species
+            dynamics—predator–prey relationships, social needs, and published
+            husbandry guidance—not just energy levels.
+          </p>
+          <div className="checker">
+            <div className="household-step">
+              <span className="step-label">1 · How many animals?</span>
+              <div className="count-pills">
+                {[2, 3, 4, 5, 6].map(n => (
+                  <button
+                    key={n}
+                    className={
+                      count === n ? "count-pill selected" : "count-pill"
+                    }
+                    onClick={() => setCountAndOptions(n)}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="household-step">
+              <span className="step-label">2 · Same or different animals?</span>
+              <div className="mode-pills">
+                <button
+                  className={same ? "mode-pill" : "mode-pill selected"}
+                  onClick={() => {
+                    setSame(false);
+                    setIds(
+                      ids.map(
+                        (id, i) =>
+                          id || animalCatalog[i % animalCatalog.length].id
+                      )
+                    );
+                  }}
+                >
+                  Different animals
+                </button>
+                <button
+                  className={same ? "mode-pill selected" : "mode-pill"}
+                  onClick={() => {
+                    setSame(true);
+                    setIds(Array(count).fill(ids[0] || "cat"));
+                  }}
+                >
+                  Same animal
+                </button>
+              </div>
+            </div>
+            <div className="household-step">
+              <span className="step-label">
+                3 · Choose {count}{" "}
+                {same ? "animals of the same type" : "animals"}
+              </span>
+              <div className="animal-picker-grid">
+                {ids.map((id, index) => (
+                  <label key={index}>
+                    Animal {index + 1}
+                    <select
+                      value={id}
+                      onChange={e => {
+                        const next = [...ids];
+                        next[index] = e.target.value;
+                        setIds(next);
+                      }}
+                    >
+                      {animalCatalog.map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.emoji} {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div
+              className={
+                result.score < 50 ? "compat-result caution" : "compat-result"
+              }
+            >
+              <span className="result-pill">Estimated compatibility</span>
+              <strong className="compat-score">{result.score}%</strong>
+              <h2>{headline}</h2>
+              <p>
+                Individual age, health, sex, temperament, history, space, and
+                local rules can change the outcome—introductions are always the
+                animals' decision.
+              </p>
+              {result.notes.length > 0 && (
+                <div className="compat-notes">
+                  <h3>What the guidance says</h3>
+                  <ul>
+                    {result.notes.map(n => (
+                      <li key={n.text}>
+                        {n.text}{" "}
+                        <span className="note-source">— {n.source}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="guide-grid">
+            <Guide
+              title="Space + resources"
+              text="Plan duplicates of key resources where appropriate: resting spots, feeding areas, litter or toileting setups, and hiding places."
+            />
+            <Guide
+              title="Time + cost"
+              text="More animals can mean non-linear costs when emergencies, boarding, insurance, or species-specific supplies enter the picture."
+            />
+            <Guide
+              title="Introductions"
+              text="Move at the animals' pace. A reputable shelter, behavior professional, or veterinarian can help with a difficult match."
+            />
+          </div>
+          <p className="source-footnote">
+            Species rules are drawn from published guidance: RSPCA (hamsters,
+            rabbits, rodents, birds), Lafeber avian vets (parrots and small
+            birds), The Open Sanctuary Project (horses, donkeys, camelids),
+            Animal Humane Society (dog–cat introductions), House Rabbit Network
+            (ferrets as rabbit predators), and the Merck Veterinary Manual
+            (poultry disease, reptile and fish husbandry). No source publishes
+            this exact percentage—scores are a transparent heuristic.
+          </p>
+          <Disclaimer />
+        </div>
+      </main>
+      <Footer />
+    </>
+  );
+}
+function Guide({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="guide-card">
+      <span className="guide-dot" />
+      <h3>{title}</h3>
+      <p>{text}</p>
+    </div>
+  );
+}
 
 const careSources = [
-  { title: "AVMA · Pet care", href: sources.avmaCare, topic: "preventive care, safety, medications, and responsible ownership" },
-  { title: "AVMA · Vaccinating your pet", href: sources.avmaVaccines, topic: "individualized vaccination plans and reactions" },
-  { title: "AAHA · Preventive care", href: sources.aaha, topic: "wellness exams, vaccines, nutrition, and life-stage care" },
-  { title: "ASPCA · Emergency care", href: sources.aspcaEmergency, topic: "emergency signs and preparing for urgent care" },
-  { title: "Merck Veterinary Manual", href: "https://www.merckvetmanual.com/", topic: "veterinary reference information across species" },
-  { title: "RSPCA · Pet care", href: "https://www.rspca.org.uk/adviceandwelfare/pets", topic: "welfare-first advice for companion animals" },
-  { title: "Humane Society · Animals", href: "https://www.humanesociety.org/animals", topic: "everyday care, adoption, and behavior resources" },
-  { title: "CDC · Healthy pets, healthy people", href: "https://www.cdc.gov/healthy-pets/about/index.html", topic: "zoonoses, hygiene, and public health" },
-  { title: "Companion Animal Parasite Council", href: "https://capcvet.org/", topic: "parasite prevention guidance" },
-  { title: "American Heartworm Society", href: "https://www.heartwormsociety.org/", topic: "heartworm prevention and education" },
-  { title: "WSAVA Global Guidelines", href: "https://wsava.org/global-guidelines/", topic: "global veterinary guidelines for companion animals" },
-  { title: "Association of Shelter Veterinarians", href: "https://www.sheltervet.org/guidelines-for-standards-of-care-in-animal-shelters", topic: "evidence-informed shelter animal care standards" },
+  {
+    title: "AVMA · Pet care",
+    href: sources.avmaCare,
+    topic: "preventive care, safety, medications, and responsible ownership",
+  },
+  {
+    title: "AVMA · Vaccinating your pet",
+    href: sources.avmaVaccines,
+    topic: "individualized vaccination plans and reactions",
+  },
+  {
+    title: "AAHA · Preventive care",
+    href: sources.aaha,
+    topic: "wellness exams, vaccines, nutrition, and life-stage care",
+  },
+  {
+    title: "ASPCA · Emergency care",
+    href: sources.aspcaEmergency,
+    topic: "emergency signs and preparing for urgent care",
+  },
+  {
+    title: "Merck Veterinary Manual",
+    href: "https://www.merckvetmanual.com/",
+    topic: "veterinary reference information across species",
+  },
+  {
+    title: "RSPCA · Pet care",
+    href: "https://www.rspca.org.uk/adviceandwelfare/pets",
+    topic: "welfare-first advice for companion animals",
+  },
+  {
+    title: "Humane Society · Animals",
+    href: "https://www.humanesociety.org/animals",
+    topic: "everyday care, adoption, and behavior resources",
+  },
+  {
+    title: "CDC · Healthy pets, healthy people",
+    href: "https://www.cdc.gov/healthy-pets/about/index.html",
+    topic: "zoonoses, hygiene, and public health",
+  },
+  {
+    title: "Companion Animal Parasite Council",
+    href: "https://capcvet.org/",
+    topic: "parasite prevention guidance",
+  },
+  {
+    title: "American Heartworm Society",
+    href: "https://www.heartwormsociety.org/",
+    topic: "heartworm prevention and education",
+  },
+  {
+    title: "WSAVA Global Guidelines",
+    href: "https://wsava.org/global-guidelines/",
+    topic: "global veterinary guidelines for companion animals",
+  },
+  {
+    title: "Association of Shelter Veterinarians",
+    href: "https://www.sheltervet.org/guidelines-for-standards-of-care-in-animal-shelters",
+    topic: "evidence-informed shelter animal care standards",
+  },
 ];
 
 function SourceAssistant() {
@@ -192,33 +1858,233 @@ function SourceAssistant() {
     setAnswer(answerFor(question));
     if (q) return; // focus stays for typed queries; chips already show the question
   };
-  return <section className="assistant-card">
-    <div className="assistant-heading"><span className="feature-icon"><Sparkles size={19} /></span><div><span className="eyebrow">source assistant</span><h2>Ask a care question.</h2></div></div>
-    <p>Get an immediate, safety-first response from Petwise's curated source rules — species-specific care, diet, costs, introductions, and emergencies. It is not live browsing or veterinary diagnosis.</p>
-    <div className="assistant-input">
-      <input aria-label="Ask a pet care question" value={query} maxLength={200} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && ask()} placeholder="e.g. What do rabbits eat?" />
-      <button className="button button-dark" onClick={() => ask()}>Ask <ArrowRight size={16} /></button>
-    </div>
-    <div className="chip-row" aria-label="Suggested questions">
-      {suggestedQuestions.map(q => <button key={q} type="button" className="chip" onClick={() => ask(q)}>{q}</button>)}
-    </div>
-    {answer && <div className="assistant-answer" role="status">
-      <span className="source-tag">{answer.title}</span>
-      <span className="answer-source">Cited: {answer.source}</span>
-      <p>{answer.text}</p>
-      <a className="source-link" href={answer.href} target="_blank" rel="noreferrer">Open cited source <ExternalLink size={14} /></a>
-    </div>}
-  </section>;
+  return (
+    <section className="assistant-card">
+      <div className="assistant-heading">
+        <span className="feature-icon">
+          <Sparkles size={19} />
+        </span>
+        <div>
+          <span className="eyebrow">source assistant</span>
+          <h2>Ask a care question.</h2>
+        </div>
+      </div>
+      <p>
+        Get an immediate, safety-first response from Petwise's curated source
+        rules — species-specific care, diet, costs, introductions, and
+        emergencies. It is not live browsing or veterinary diagnosis.
+      </p>
+      <div className="assistant-input">
+        <input
+          aria-label="Ask a pet care question"
+          value={query}
+          maxLength={200}
+          onChange={e => setQuery(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && ask()}
+          placeholder="e.g. What do rabbits eat?"
+        />
+        <button className="button button-dark" onClick={() => ask()}>
+          Ask <ArrowRight size={16} />
+        </button>
+      </div>
+      <div className="chip-row" aria-label="Suggested questions">
+        {suggestedQuestions.map(q => (
+          <button key={q} type="button" className="chip" onClick={() => ask(q)}>
+            {q}
+          </button>
+        ))}
+      </div>
+      {answer && (
+        <div className="assistant-answer" role="status">
+          <span className="source-tag">{answer.title}</span>
+          <span className="answer-source">Cited: {answer.source}</span>
+          <p>{answer.text}</p>
+          <a
+            className="source-link"
+            href={answer.href}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open cited source <ExternalLink size={14} />
+          </a>
+        </div>
+      )}
+    </section>
+  );
 }
 
-function CarePage() { usePageTitle("Care library — Petwise"); return <><Header /><main className="section section-light"><div className="container narrow"><span className="eyebrow">vet-sourced care library</span><h1>More sources.<br /><em>Better questions.</em></h1><p className="lede">A curated starting point across veterinary medicine, animal welfare, public health, parasite prevention, and shelter care. Every link opens the named source.</p><SourceAssistant /><div className="care-list">{careSources.map(source => <CareArticle key={source.href} title={source.title} source={source.topic} href={source.href} text={`Public guidance covering ${source.topic}. Use it to prepare questions for a qualified care professional.`} />)}</div><Disclaimer /></div></main><Footer /></>; }
-function CareArticle({ title, source, href, text }: { title: string; source: string; href: string; text: string }) { return <article className="care-article"><div className="care-article-head"><span className="source-tag">{source}</span><a href={href} target="_blank" rel="noreferrer" aria-label={`Open source: ${source}`}><ExternalLink size={17} /></a></div><h2>{title}</h2><p>{text}</p><a className="source-link" href={href} target="_blank" rel="noreferrer">Read the source <ArrowRight size={15} /></a></article>; }
+function CarePage() {
+  usePageTitle("Care library — Petwise");
+  return (
+    <>
+      <Header />
+      <main className="section section-light">
+        <div className="container narrow">
+          <span className="eyebrow">vet-sourced care library</span>
+          <h1>
+            More sources.
+            <br />
+            <em>Better questions.</em>
+          </h1>
+          <p className="lede">
+            A curated starting point across veterinary medicine, animal welfare,
+            public health, parasite prevention, and shelter care. Every link
+            opens the named source.
+          </p>
+          <SourceAssistant />
+          <div className="care-list">
+            {careSources.map(source => (
+              <CareArticle
+                key={source.href}
+                title={source.title}
+                source={source.topic}
+                href={source.href}
+                text={`Public guidance covering ${source.topic}. Use it to prepare questions for a qualified care professional.`}
+              />
+            ))}
+          </div>
+          <Disclaimer />
+        </div>
+      </main>
+      <Footer />
+    </>
+  );
+}
+function CareArticle({
+  title,
+  source,
+  href,
+  text,
+}: {
+  title: string;
+  source: string;
+  href: string;
+  text: string;
+}) {
+  return (
+    <article className="care-article">
+      <div className="care-article-head">
+        <span className="source-tag">{source}</span>
+        <a
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={`Open source: ${source}`}
+        >
+          <ExternalLink size={17} />
+        </a>
+      </div>
+      <h2>{title}</h2>
+      <p>{text}</p>
+      <a className="source-link" href={href} target="_blank" rel="noreferrer">
+        Read the source <ArrowRight size={15} />
+      </a>
+    </article>
+  );
+}
 
-const policyCopy: Record<string, { title: string; intro: string; sections: [string, string][] }> = {
-  privacy: { title: "Privacy policy", intro: "Petwise is designed to be useful without collecting a personal profile.", sections: [["What we collect", "The quiz answers are processed in your browser to generate a result. We do not require an account, name, email address, phone number, precise location, or pet medical record to use the core experience."], ["Analytics and third parties", "Analytics is disabled by default in this MVP. We do not embed social feeds, ad pixels, chat widgets, maps, or other third-party trackers. If that changes, this policy and the cookie choices will be updated before collection begins."], ["Your choices", "You can use the site without submitting a form. You can clear local browser data at any time through your browser settings. For privacy questions, contact the business using the details published on this site once they are confirmed by the owner."]]},
-  cookies: { title: "Cookies policy", intro: "We prefer a quiet website: no non-essential cookies are active in this MVP.", sections: [["Necessary storage", "The app may use temporary browser state to move through the quiz. This is functional storage, not a marketing profile, and no quiz answer is sent to a server."], ["Consent", "Because no optional analytics or advertising cookies are active, there is no tracking consent prompt to accept. If optional cookies are introduced, they must be blocked until a visitor gives clear consent and a settings control is provided."], ["Third-party embeds", "There are no third-party embeds in the current experience. External source links open the named organization in a new tab; leaving Petwise means that organization's policies apply."]]},
-  terms: { title: "Terms of use", intro: "Use Petwise as a thoughtful starting point—not as a promise about a specific animal.", sections: [["Informational use", "Petwise provides general educational information and a deterministic matching exercise. It is not veterinary, medical, behavioral, legal, housing, or financial advice, and it does not create a professional-client relationship."], ["No guarantee", "Results are suggestions based on limited self-reported inputs. Meet the animal and verify housing rules, costs, care requirements, temperament, and local regulations with qualified people before adopting or buying."], ["Responsible use", "Do not use the site to diagnose, prescribe, select medication, or decide that an urgent symptom can wait. Contact a licensed veterinarian for animal health concerns."]]},
+const policyCopy: Record<
+  string,
+  { title: string; intro: string; sections: [string, string][] }
+> = {
+  privacy: {
+    title: "Privacy policy",
+    intro:
+      "Petwise is designed to be useful without collecting a personal profile.",
+    sections: [
+      [
+        "What we collect",
+        "The quiz answers are processed in your browser to generate a result. We do not require an account, name, email address, phone number, precise location, or pet medical record to use the core experience.",
+      ],
+      [
+        "Analytics and third parties",
+        "Analytics is disabled by default in this MVP. We do not embed social feeds, ad pixels, chat widgets, maps, or other third-party trackers. If that changes, this policy and the cookie choices will be updated before collection begins.",
+      ],
+      [
+        "Your choices",
+        "You can use the site without submitting a form. You can clear local browser data at any time through your browser settings. For privacy questions, contact the business using the details published on this site once they are confirmed by the owner.",
+      ],
+    ],
+  },
+  cookies: {
+    title: "Cookies policy",
+    intro:
+      "We prefer a quiet website: no non-essential cookies are active in this MVP.",
+    sections: [
+      [
+        "Necessary storage",
+        "The app may use temporary browser state to move through the quiz. This is functional storage, not a marketing profile, and no quiz answer is sent to a server.",
+      ],
+      [
+        "Consent",
+        "Because no optional analytics or advertising cookies are active, there is no tracking consent prompt to accept. If optional cookies are introduced, they must be blocked until a visitor gives clear consent and a settings control is provided.",
+      ],
+      [
+        "Third-party embeds",
+        "There are no third-party embeds in the current experience. External source links open the named organization in a new tab; leaving Petwise means that organization's policies apply.",
+      ],
+    ],
+  },
+  terms: {
+    title: "Terms of use",
+    intro:
+      "Use Petwise as a thoughtful starting point—not as a promise about a specific animal.",
+    sections: [
+      [
+        "Informational use",
+        "Petwise provides general educational information and a deterministic matching exercise. It is not veterinary, medical, behavioral, legal, housing, or financial advice, and it does not create a professional-client relationship.",
+      ],
+      [
+        "No guarantee",
+        "Results are suggestions based on limited self-reported inputs. Meet the animal and verify housing rules, costs, care requirements, temperament, and local regulations with qualified people before adopting or buying.",
+      ],
+      [
+        "Responsible use",
+        "Do not use the site to diagnose, prescribe, select medication, or decide that an urgent symptom can wait. Contact a licensed veterinarian for animal health concerns.",
+      ],
+    ],
+  },
 };
-function PolicyPage({ policy }: { policy: string }) { const copy = policyCopy[policy] || policyCopy.terms; usePageTitle(`${copy.title} — Petwise`); return <><Header /><main className="section section-light"><div className="container policy-page"><span className="eyebrow">transparency</span><h1>{copy.title}</h1><p className="lede">{copy.intro}</p><div className="policy-sections">{copy.sections.map(([h, t]) => <section key={h}><h2>{h}</h2><p>{t}</p></section>)}</div><p className="last-updated">Last updated: September 2026 · This page should be reviewed by the site owner and a qualified legal professional before launch in a specific jurisdiction.</p></div></main><Footer /></>; }
+function PolicyPage({ policy }: { policy: string }) {
+  const copy = policyCopy[policy] || policyCopy.terms;
+  usePageTitle(`${copy.title} — Petwise`);
+  return (
+    <>
+      <Header />
+      <main className="section section-light">
+        <div className="container policy-page">
+          <span className="eyebrow">transparency</span>
+          <h1>{copy.title}</h1>
+          <p className="lede">{copy.intro}</p>
+          <div className="policy-sections">
+            {copy.sections.map(([h, t]) => (
+              <section key={h}>
+                <h2>{h}</h2>
+                <p>{t}</p>
+              </section>
+            ))}
+          </div>
+          <p className="last-updated">
+            Last updated: September 2026 · This page should be reviewed by the
+            site owner and a qualified legal professional before launch in a
+            specific jurisdiction.
+          </p>
+        </div>
+      </main>
+      <Footer />
+    </>
+  );
+}
 
-export default function Home() { const [match, params] = useRoute("/policies/:policy"); const [breedMatch, breedParams] = useRoute("/breeds/:animal"); const [location] = useLocation(); if (match) return <PolicyPage policy={params?.policy || "terms"} />; if (breedMatch) return <BreedExplorer animalId={breedParams?.animal || "dog"} />; if (location === "/quiz") return <QuizPage />; if (location === "/compatibility") return <CompatibilityPage />; if (location === "/care") return <CarePage />; return <HomePage />; }
+export default function Home() {
+  const [match, params] = useRoute("/policies/:policy");
+  const [breedMatch, breedParams] = useRoute("/breeds/:animal");
+  const [location] = useLocation();
+  if (match) return <PolicyPage policy={params?.policy || "terms"} />;
+  if (breedMatch)
+    return <BreedExplorer animalId={breedParams?.animal || "dog"} />;
+  if (location === "/quiz") return <QuizPage />;
+  if (location === "/compatibility") return <CompatibilityPage />;
+  if (location === "/care") return <CarePage />;
+  return <HomePage />;
+}
