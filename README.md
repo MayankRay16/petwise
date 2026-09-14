@@ -38,9 +38,9 @@ The percentages are **decision-support heuristics**, not scientifically validate
 
 ## Evidence and source policy
 
-Petwise cross-references authoritative organizations before presenting care-related guidance. The Care Library includes sources from veterinary associations, animal-welfare organizations, public-health agencies, parasite-prevention groups, shelter-veterinary organizations, and breed registries [1] [3] [5] [6] [9] [10] [12] [13].
+Petwise cross-references authoritative organizations before presenting care-related guidance. The Care Library includes sources from veterinary associations, animal-welfare organizations, public-health agencies, parasite-prevention groups, shelter-veterinary organizations, and breed registries.
 
-The current research set includes the American Veterinary Medical Association, American Animal Hospital Association, ASPCA, Merck Veterinary Manual, RSPCA, Humane Society of the United States, Centers for Disease Control and Prevention, Companion Animal Parasite Council, American Heartworm Society, World Small Animal Veterinary Association, Association of Shelter Veterinarians, American Kennel Club, The Cat Fanciers’ Association, American Rabbit Breeders Association, and The Livestock Conservancy [1] [3] [5] [6] [7] [8] [9] [10] [11] [12] [13] [14] [15] [16] [17].
+The current research set includes the American Veterinary Medical Association, American Animal Hospital Association, ASPCA, Merck Veterinary Manual, RSPCA, Humane Society of the United States, Centers for Disease Control and Prevention, Companion Animal Parasite Council, American Heartworm Society, World Small Animal Veterinary Association, Association of Shelter Veterinarians, American Kennel Club, The Cat Fanciers’ Association, American Rabbit Breeders Association, and The Livestock Conservancy.
 
 The site uses these sources to point visitors toward responsible next steps. It does not reproduce them as a substitute for reading the original guidance. External links open the named organization’s website, where that organization’s own policies and updates apply.
 
