@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://petwise-mayank.vercel.app/sitemap.xml
